@@ -2,6 +2,7 @@ package com.github.mlwilli.assetman.identity.web
 
 import com.github.mlwilli.assetman.identity.service.AuthService
 import org.springframework.graphql.data.method.annotation.QueryMapping
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Controller
 
 @Controller
@@ -10,6 +11,7 @@ class MeGraphQLController(
 ) {
 
     @QueryMapping
+    @PreAuthorize("isAuthenticated()")
     fun me(): CurrentUserDto =
         authService.currentUser()
 }

@@ -14,18 +14,27 @@ class LocationController(
 ) {
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','TECHNICIAN','VIEWER')")
     fun listLocations(
         @RequestParam(required = false) type: LocationType?,
         @RequestParam(required = false) parentId: UUID?,
+        @RequestParam(required = false) active: Boolean?,
         @RequestParam(required = false) search: String?
     ): List<LocationDto> =
-        locationService.listLocations(type, parentId, search)
+        locationService.listLocations(
+            type = type,
+            parentId = parentId,
+            active = active,
+            search = search
+        )
 
     @GetMapping("/tree")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','TECHNICIAN','VIEWER')")
     fun getLocationTree(): List<LocationTreeNodeDto> =
         locationService.getLocationTree()
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','TECHNICIAN','VIEWER')")
     fun getLocation(@PathVariable id: UUID): LocationDto =
         locationService.getLocation(id)
 
@@ -49,7 +58,7 @@ class LocationController(
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER')")
     fun deleteLocation(@PathVariable id: UUID): ResponseEntity<Void> {
         locationService.deleteLocation(id)
         return ResponseEntity.noContent().build()

@@ -14,6 +14,7 @@ import java.util.UUID
     ]
 )
 class Property(
+
     @Column(name = "tenant_id", nullable = false)
     override val tenantId: UUID,
 
@@ -56,5 +57,30 @@ class Property(
     var country: String? = null,
 
     @Column(name = "notes", nullable = true, length = 4000)
-    var notes: String? = null
+    var notes: String? = null,
+
+    /**
+     * Whether this property is active/visible in the tenant.
+     */
+    @Column(name = "is_active", nullable = false)
+    var active: Boolean = true,
+
+    /**
+     * Optional metadata we’ll likely need in a real system.
+     */
+    @Column(name = "year_built", nullable = true)
+    var yearBuilt: Int? = null,
+
+    @Column(name = "total_units", nullable = true)
+    var totalUnits: Int? = null,
+
+    @Column(name = "external_ref", nullable = true, length = 128)
+    var externalRef: String? = null,
+
+    /**
+     * Escape hatch for tenant-specific data before we formalize the model.
+     */
+    @Column(name = "custom_fields_json", nullable = true, columnDefinition = "TEXT")
+    var customFieldsJson: String? = null
+
 ) : BaseEntity(), TenantScoped

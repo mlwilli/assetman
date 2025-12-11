@@ -14,6 +14,7 @@ class UnitController(
 ) {
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','TECHNICIAN','VIEWER')")
     fun listUnits(
         @RequestParam(required = false) propertyId: UUID?,
         @RequestParam(required = false) status: UnitStatus?,
@@ -22,6 +23,7 @@ class UnitController(
         unitService.listUnits(propertyId, status, search)
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','TECHNICIAN','VIEWER')")
     fun getUnit(@PathVariable id: UUID): UnitDto =
         unitService.getUnit(id)
 
@@ -45,7 +47,7 @@ class UnitController(
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER')")
     fun deleteUnit(@PathVariable id: UUID): ResponseEntity<Void> {
         unitService.deleteUnit(id)
         return ResponseEntity.noContent().build()

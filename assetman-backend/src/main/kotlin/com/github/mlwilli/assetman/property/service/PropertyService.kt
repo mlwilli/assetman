@@ -1,12 +1,17 @@
 package com.github.mlwilli.assetman.property.service
 
+import com.github.mlwilli.assetman.common.error.ConflictException
+import com.github.mlwilli.assetman.common.error.NotFoundException
+import com.github.mlwilli.assetman.common.security.TenantContext
+import com.github.mlwilli.assetman.common.security.currentTenantId
 import com.github.mlwilli.assetman.property.domain.Property
 import com.github.mlwilli.assetman.property.domain.PropertyType
 import com.github.mlwilli.assetman.property.repo.PropertyRepository
+import com.github.mlwilli.assetman.property.repo.UnitRepository
 import com.github.mlwilli.assetman.property.web.CreatePropertyRequest
 import com.github.mlwilli.assetman.property.web.PropertyDto
 import com.github.mlwilli.assetman.property.web.UpdatePropertyRequest
-import com.github.mlwilli.assetman.common.security.TenantContext
+import com.github.mlwilli.assetman.property.web.toDto
 import jakarta.persistence.EntityNotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -14,7 +19,8 @@ import java.util.UUID
 
 @Service
 class PropertyService(
-    private val propertyRepository: PropertyRepository
+    private val propertyRepository: PropertyRepository,
+    private val unitRepository: UnitRepository
 ) {
 
     @Transactional(readOnly = true)
@@ -23,6 +29,7 @@ class PropertyService(
         search: String?
     ): List<PropertyDto> {
         val ctx = TenantContext.get() ?: error("No authenticated user in context")
+
         return propertyRepository.search(
             tenantId = ctx.tenantId,
             type = type,
@@ -32,15 +39,16 @@ class PropertyService(
 
     @Transactional(readOnly = true)
     fun getProperty(id: UUID): PropertyDto {
-        val ctx = TenantContext.get() ?: error("No authenticated user in context")
-        val prop = propertyRepository.findByIdAndTenantId(id, ctx.tenantId)
-            ?: throw EntityNotFoundException("Property not found")
-        return prop.toDto()
+        val tenantId = currentTenantId()
+        val property = propertyRepository.findByIdAndTenantId(id, tenantId)
+            ?: throw NotFoundException("Property not found")
+        return property.toDto()
     }
 
     @Transactional
     fun createProperty(request: CreatePropertyRequest): PropertyDto {
         val ctx = TenantContext.get() ?: error("No authenticated user in context")
+
         val entity = Property(
             tenantId = ctx.tenantId,
             name = request.name,
@@ -53,8 +61,14 @@ class PropertyService(
             state = request.state,
             postalCode = request.postalCode,
             country = request.country,
-            notes = request.notes
+            notes = request.notes,
+            active = request.active,
+            yearBuilt = request.yearBuilt,
+            totalUnits = request.totalUnits,
+            externalRef = request.externalRef,
+            customFieldsJson = request.customFieldsJson
         )
+
         val saved = propertyRepository.save(entity)
         return saved.toDto()
     }
@@ -62,6 +76,7 @@ class PropertyService(
     @Transactional
     fun updateProperty(id: UUID, request: UpdatePropertyRequest): PropertyDto {
         val ctx = TenantContext.get() ?: error("No authenticated user in context")
+
         val existing = propertyRepository.findByIdAndTenantId(id, ctx.tenantId)
             ?: throw EntityNotFoundException("Property not found")
 
@@ -76,6 +91,11 @@ class PropertyService(
         existing.postalCode = request.postalCode
         existing.country = request.country
         existing.notes = request.notes
+        existing.active = request.active
+        existing.yearBuilt = request.yearBuilt
+        existing.totalUnits = request.totalUnits
+        existing.externalRef = request.externalRef
+        existing.customFieldsJson = request.customFieldsJson
 
         val saved = propertyRepository.save(existing)
         return saved.toDto()
@@ -84,28 +104,14 @@ class PropertyService(
     @Transactional
     fun deleteProperty(id: UUID) {
         val ctx = TenantContext.get() ?: error("No authenticated user in context")
+
         val existing = propertyRepository.findByIdAndTenantId(id, ctx.tenantId)
             ?: return
-        // TODO: enforce that no units/leases exist before deleting (later)
+
+        if (unitRepository.existsByTenantIdAndPropertyId(ctx.tenantId, existing.id)) {
+            throw ConflictException("Cannot delete property with existing units")
+        }
+
         propertyRepository.delete(existing)
     }
-
-    private fun Property.toDto(): PropertyDto =
-        PropertyDto(
-            id = id,
-            tenantId = tenantId,
-            name = name,
-            type = type,
-            code = code,
-            locationId = locationId,
-            addressLine1 = addressLine1,
-            addressLine2 = addressLine2,
-            city = city,
-            state = state,
-            postalCode = postalCode,
-            country = country,
-            notes = notes,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-        )
 }

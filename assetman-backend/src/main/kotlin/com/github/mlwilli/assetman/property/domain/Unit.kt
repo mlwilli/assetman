@@ -4,6 +4,7 @@ import com.github.mlwilli.assetman.common.domain.BaseEntity
 import com.github.mlwilli.assetman.common.domain.TenantScoped
 import jakarta.persistence.*
 import java.math.BigDecimal
+import java.time.LocalDate
 import java.util.UUID
 
 @Entity
@@ -16,6 +17,7 @@ import java.util.UUID
     ]
 )
 class Unit(
+
     @Column(name = "tenant_id", nullable = false)
     override val tenantId: UUID,
 
@@ -32,7 +34,7 @@ class Unit(
     @Column(name = "status", nullable = false)
     var status: UnitStatus = UnitStatus.VACANT,
 
-    // Simple basic fields – later we can expand for leases, etc.
+    // Basic characteristics
     @Column(name = "bedrooms", nullable = true)
     var bedrooms: Int? = null,
 
@@ -42,12 +44,34 @@ class Unit(
     @Column(name = "area_sq_ft", nullable = true, precision = 12, scale = 2)
     var areaSqFt: BigDecimal? = null,
 
+    // Pricing
     @Column(name = "monthly_rent", nullable = true, precision = 14, scale = 2)
     var monthlyRent: BigDecimal? = null,
 
     @Column(name = "currency", nullable = true, length = 3)
     var currency: String? = "USD",
 
+    // Availability / leasing hints
+    @Column(name = "available_from", nullable = true)
+    var availableFrom: LocalDate? = null,
+
+    @Column(name = "available_to", nullable = true)
+    var availableTo: LocalDate? = null,
+
+    @Column(name = "max_occupancy", nullable = true)
+    var maxOccupancy: Int? = null,
+
+    @Column(name = "is_furnished", nullable = false)
+    var furnished: Boolean = false,
+
+    // Integration and notes
+    @Column(name = "external_ref", nullable = true, length = 128)
+    var externalRef: String? = null,
+
     @Column(name = "notes", nullable = true, length = 4000)
-    var notes: String? = null
+    var notes: String? = null,
+
+    @Column(name = "custom_fields_json", nullable = true, columnDefinition = "TEXT")
+    var customFieldsJson: String? = null
+
 ) : BaseEntity(), TenantScoped

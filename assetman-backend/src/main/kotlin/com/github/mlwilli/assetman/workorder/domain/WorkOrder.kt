@@ -22,6 +22,7 @@ import java.util.UUID
     ]
 )
 class WorkOrder(
+
     @Column(name = "tenant_id", nullable = false)
     override val tenantId: UUID,
 
@@ -95,4 +96,60 @@ class WorkOrder(
 
     @Column(name = "notes", nullable = true, length = 4000)
     var notes: String? = null
-) : BaseEntity(), TenantScoped
+
+) : BaseEntity(), TenantScoped {
+
+    /**
+     * Returns true if the work order is past its due date and not in a terminal state.
+     */
+    fun isOverdue(today: LocalDate = LocalDate.now()): Boolean {
+        val due = dueDate ?: return false
+        return due.isBefore(today) && status !in setOf(
+            WorkOrderStatus.COMPLETED,
+            WorkOrderStatus.CANCELLED
+        )
+    }
+
+    /**
+     * Transition to IN_PROGRESS, setting startedAt if not already set.
+     */
+    fun start(now: Instant = Instant.now()) {
+        if (status == WorkOrderStatus.CANCELLED || status == WorkOrderStatus.COMPLETED) {
+            throw IllegalStateException("Cannot start a work order that is $status")
+        }
+        status = WorkOrderStatus.IN_PROGRESS
+        if (startedAt == null) {
+            startedAt = now
+        }
+    }
+
+    /**
+     * Transition to COMPLETED, setting completedAt if not already set.
+     */
+    fun complete(now: Instant = Instant.now()) {
+        if (status == WorkOrderStatus.CANCELLED) {
+            throw IllegalStateException("Cannot complete a cancelled work order")
+        }
+        status = WorkOrderStatus.COMPLETED
+        if (completedAt == null) {
+            completedAt = now
+        }
+    }
+
+    /**
+     * Put a work order ON_HOLD.
+     */
+    fun hold() {
+        if (status == WorkOrderStatus.CANCELLED || status == WorkOrderStatus.COMPLETED) {
+            throw IllegalStateException("Cannot put a $status work order on hold")
+        }
+        status = WorkOrderStatus.ON_HOLD
+    }
+
+    /**
+     * Cancel a work order.
+     */
+    fun cancel() {
+        status = WorkOrderStatus.CANCELLED
+    }
+}

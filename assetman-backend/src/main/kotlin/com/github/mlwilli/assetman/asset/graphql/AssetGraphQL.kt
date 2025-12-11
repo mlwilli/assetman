@@ -15,19 +15,83 @@ class AssetGraphQL(
     private val assetService: AssetService
 ) {
 
+    /**
+     * Query: assets(status, search, page, size): AssetPage!
+     *
+     * Uses AssetService.listAssetsForCurrentTenant with simple filters.
+     */
     @QueryMapping
     fun assets(
         @Argument status: AssetStatus?,
         @Argument search: String?,
-        @Argument page: Int,
-        @Argument size: Int
+        @Argument page: Int = 0,
+        @Argument size: Int = 20
     ): PageResponse<AssetDto> {
         val pageable = PageRequest.of(page, size)
-        val resultPage = assetService.listAssetsForCurrentTenant(status, search, pageable)
-        return PageResponse.Companion.from(resultPage)
+
+        val resultPage = assetService.listAssetsForCurrentTenant(
+            status = status,
+            category = null,
+            locationId = null,
+            propertyId = null,
+            unitId = null,
+            assignedUserId = null,
+            search = search,
+            pageable = pageable
+        )
+
+        return PageResponse.from(resultPage)
     }
 
+    /**
+     * Query: asset(id: ID!): Asset
+     */
     @QueryMapping
     fun asset(@Argument id: UUID): AssetDto =
         assetService.getAsset(id)
+
+    /**
+     * Query: assetByExternalRef(externalRef: String!): Asset
+     *
+     * Tenant-scoped lookup by external reference.
+     */
+    @QueryMapping
+    fun assetByExternalRef(
+        @Argument externalRef: String
+    ): AssetDto =
+        assetService.getAssetByExternalRef(externalRef)
+
+    /**
+     * Query: assetsByStatusAndLocation(
+     *   status: AssetStatus!,
+     *   locationId: ID!,
+     *   page: Int = 0,
+     *   size: Int = 20
+     * ): AssetPage!
+     *
+     * Uses the same location subtree behavior as REST:
+     * - AssetService resolves the location path and filters by subtree.
+     */
+    @QueryMapping
+    fun assetsByStatusAndLocation(
+        @Argument status: AssetStatus,
+        @Argument locationId: UUID,
+        @Argument page: Int = 0,
+        @Argument size: Int = 20
+    ): PageResponse<AssetDto> {
+        val pageable = PageRequest.of(page, size)
+
+        val resultPage = assetService.listAssetsForCurrentTenant(
+            status = status,
+            category = null,
+            locationId = locationId,
+            propertyId = null,
+            unitId = null,
+            assignedUserId = null,
+            search = null,
+            pageable = pageable
+        )
+
+        return PageResponse.from(resultPage)
+    }
 }

@@ -35,8 +35,7 @@ class SecurityConfig(
                         "/api/auth/login",
                         "/api/auth/forgot-password",
                         "/api/auth/reset-password",
-                        "/api/auth/refresh",
-                        "/api/auth/logout"
+                        "/api/auth/refresh"
                     ).permitAll()
                     .anyRequest().authenticated()
             }
@@ -44,5 +43,4 @@ class SecurityConfig(
 
         return http.build()
     }
-
 }

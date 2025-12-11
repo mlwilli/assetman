@@ -4,9 +4,11 @@ import com.github.mlwilli.assetman.workorder.domain.WorkOrderPriority
 import com.github.mlwilli.assetman.workorder.domain.WorkOrderStatus
 import com.github.mlwilli.assetman.workorder.domain.WorkOrderType
 import com.github.mlwilli.assetman.workorder.service.WorkOrderService
+import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
+import java.net.URI
 import java.util.UUID
 
 @RestController
@@ -16,6 +18,7 @@ class WorkOrderController(
 ) {
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','TECHNICIAN','VIEWER')")
     fun listWorkOrders(
         @RequestParam(required = false) status: WorkOrderStatus?,
         @RequestParam(required = false) priority: WorkOrderPriority?,
@@ -38,23 +41,25 @@ class WorkOrderController(
         )
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','TECHNICIAN','VIEWER')")
     fun getWorkOrder(@PathVariable id: UUID): WorkOrderDto =
         workOrderService.getWorkOrder(id)
 
     @PostMapping
     @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','TECHNICIAN')")
     fun createWorkOrder(
-        @RequestBody request: CreateWorkOrderRequest
+        @Valid @RequestBody request: CreateWorkOrderRequest
     ): ResponseEntity<WorkOrderDto> {
         val created = workOrderService.createWorkOrder(request)
-        return ResponseEntity.ok(created)
+        val location = URI.create("/api/work-orders/${created.id}")
+        return ResponseEntity.created(location).body(created)
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','TECHNICIAN')")
     fun updateWorkOrder(
         @PathVariable id: UUID,
-        @RequestBody request: UpdateWorkOrderRequest
+        @Valid @RequestBody request: UpdateWorkOrderRequest
     ): ResponseEntity<WorkOrderDto> {
         val updated = workOrderService.updateWorkOrder(id, request)
         return ResponseEntity.ok(updated)

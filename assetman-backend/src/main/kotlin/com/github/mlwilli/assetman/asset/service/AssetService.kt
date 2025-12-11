@@ -6,59 +6,116 @@ import com.github.mlwilli.assetman.asset.repo.AssetRepository
 import com.github.mlwilli.assetman.asset.web.AssetDto
 import com.github.mlwilli.assetman.asset.web.CreateAssetRequest
 import com.github.mlwilli.assetman.asset.web.UpdateAssetRequest
+import com.github.mlwilli.assetman.asset.web.toDto
 import com.github.mlwilli.assetman.common.error.NotFoundException
 import com.github.mlwilli.assetman.common.security.currentTenantId
+import com.github.mlwilli.assetman.location.repo.LocationRepository
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 @Service
 class AssetService(
-    private val assetRepository: AssetRepository
+    private val assetRepository: AssetRepository,
+    private val locationRepository: LocationRepository
 ) {
 
+    @Transactional
     fun createAsset(request: CreateAssetRequest): AssetDto {
         val tenantId = currentTenantId()
 
         val asset = Asset(
             tenantId = tenantId,
             name = request.name,
-            status = request.status ?: AssetStatus.IN_SERVICE, // or enforce non-null via validation
-            tags = request.tags?.joinToString(","),
+            status = request.status,
             category = request.category,
+            code = request.code,
+            assetTag = request.assetTag,
+            manufacturer = request.manufacturer,
+            model = request.model,
             serialNumber = request.serialNumber,
+            tags = request.tags?.joinToString(","),
             purchaseDate = request.purchaseDate,
             purchaseCost = request.purchaseCost,
-            locationId = request.locationId,
-            assignedUserId = request.assignedUserId,
+            inServiceDate = request.inServiceDate,
+            retiredDate = request.retiredDate,
+            disposedDate = request.disposedDate,
             warrantyExpiryDate = request.warrantyExpiryDate,
+            depreciationYears = request.depreciationYears,
+            residualValue = request.residualValue,
+            locationId = request.locationId,
+            propertyId = request.propertyId,
+            unitId = request.unitId,
+            assignedUserId = request.assignedUserId,
+            externalRef = request.externalRef,
             customFieldsJson = request.customFieldsJson
         )
 
         val saved = assetRepository.save(asset)
-        return toDto(saved)
+        return saved.toDto()
     }
 
+    @Transactional(readOnly = true)
     fun getAsset(id: UUID): AssetDto {
         val tenantId = currentTenantId()
 
         val asset = assetRepository.findByIdAndTenantId(id, tenantId)
             ?: throw NotFoundException("Asset not found")
 
-        return toDto(asset)
+        return asset.toDto()
     }
 
+    @Transactional(readOnly = true)
     fun listAssetsForCurrentTenant(
         status: AssetStatus?,
+        category: String?,
+        locationId: UUID?,
+        propertyId: UUID?,
+        unitId: UUID?,
+        assignedUserId: UUID?,
         search: String?,
         pageable: Pageable
     ): Page<AssetDto> {
         val tenantId = currentTenantId()
-        val page = assetRepository.search(tenantId, status, search, pageable)
-        return page.map { asset -> toDto(asset) }
+
+        // Compute subtree IDs when a location filter is provided
+        val locationIds: List<UUID>? =
+            if (locationId == null) {
+                null
+            } else {
+                val root = locationRepository.findByIdAndTenantId(locationId, tenantId)
+                    ?: throw NotFoundException("Location not found")
+
+                val path = root.path ?: "/${root.id}"
+                val pathPrefix = path.trimEnd('/') + "/"
+
+                val subtree = locationRepository.findAllByTenantIdAndPathStartingWith(
+                    tenantId = tenantId,
+                    pathPrefix = pathPrefix
+                )
+
+                // include root itself
+                (subtree.map { it.id } + root.id).distinct()
+            }
+
+        val page = assetRepository.search(
+            tenantId = tenantId,
+            status = status,
+            category = category,
+            locationIds = locationIds,
+            propertyId = propertyId,
+            unitId = unitId,
+            assignedUserId = assignedUserId,
+            search = search,
+            pageable = pageable
+        )
+
+        return page.map { it.toDto() }
     }
 
+    @Transactional
     fun updateAsset(id: UUID, request: UpdateAssetRequest): AssetDto {
         val tenantId = currentTenantId()
 
@@ -66,21 +123,34 @@ class AssetService(
             ?: throw NotFoundException("Asset not found")
 
         asset.name = request.name
-        asset.status = request.status!! // validated as @NotNull
+        asset.status = request.status
         asset.category = request.category
+        asset.code = request.code
+        asset.assetTag = request.assetTag
+        asset.manufacturer = request.manufacturer
+        asset.model = request.model
         asset.serialNumber = request.serialNumber
         asset.tags = request.tags?.joinToString(",")
         asset.purchaseDate = request.purchaseDate
         asset.purchaseCost = request.purchaseCost
-        asset.locationId = request.locationId
-        asset.assignedUserId = request.assignedUserId
+        asset.inServiceDate = request.inServiceDate
+        asset.retiredDate = request.retiredDate
+        asset.disposedDate = request.disposedDate
         asset.warrantyExpiryDate = request.warrantyExpiryDate
+        asset.depreciationYears = request.depreciationYears
+        asset.residualValue = request.residualValue
+        asset.locationId = request.locationId
+        asset.propertyId = request.propertyId
+        asset.unitId = request.unitId
+        asset.assignedUserId = request.assignedUserId
+        asset.externalRef = request.externalRef
         asset.customFieldsJson = request.customFieldsJson
 
         val updated = assetRepository.save(asset)
-        return toDto(updated)
+        return updated.toDto()
     }
 
+    @Transactional
     fun deleteAsset(id: UUID) {
         val tenantId = currentTenantId()
 
@@ -90,29 +160,32 @@ class AssetService(
         assetRepository.delete(asset)
     }
 
-    // --- mapping ---
+    @Transactional(readOnly = true)
+    fun getAssetByExternalRef(externalRef: String): AssetDto {
+        val tenantId = currentTenantId()
 
-    private fun toDto(asset: Asset): AssetDto =
-        AssetDto(
-            id = asset.id,
-            tenantId = asset.tenantId,
-            name = asset.name,
-            status = asset.status,
-            category = asset.category,
-            serialNumber = asset.serialNumber,
-            // entity.tags: String? -> DTO: List<String>
-            tags = asset.tags
-                ?.split(',')
-                ?.map { it.trim() }
-                ?.filter { it.isNotEmpty() }
-                ?: emptyList(),
-            purchaseDate = asset.purchaseDate,
-            purchaseCost = asset.purchaseCost,
-            locationId = asset.locationId,
-            assignedUserId = asset.assignedUserId,
-            warrantyExpiryDate = asset.warrantyExpiryDate,
-            customFieldsJson = asset.customFieldsJson,
-            createdAt = asset.createdAt,
-            updatedAt = asset.updatedAt
+        val asset = assetRepository.findByTenantIdAndExternalRef(tenantId, externalRef)
+            ?: throw NotFoundException("Asset not found for externalRef: $externalRef")
+
+        return asset.toDto()
+    }
+
+    @Transactional(readOnly = true)
+    fun listAssetsByStatusAndLocation(
+        status: AssetStatus,
+        locationId: UUID,
+        pageable: Pageable
+    ): Page<AssetDto> {
+        return listAssetsForCurrentTenant(
+            status = status,
+            category = null,
+            locationId = locationId,
+            propertyId = null,
+            unitId = null,
+            assignedUserId = null,
+            search = null,
+            pageable = pageable
         )
+    }
+
 }

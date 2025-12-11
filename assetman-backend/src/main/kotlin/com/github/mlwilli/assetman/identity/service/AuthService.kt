@@ -1,5 +1,7 @@
 package com.github.mlwilli.assetman.identity.service
 
+import com.github.mlwilli.assetman.common.security.JwtTokenProvider
+import com.github.mlwilli.assetman.common.security.requireCurrentUser
 import com.github.mlwilli.assetman.identity.domain.PasswordResetToken
 import com.github.mlwilli.assetman.identity.domain.RevokedToken
 import com.github.mlwilli.assetman.identity.domain.Role
@@ -10,8 +12,6 @@ import com.github.mlwilli.assetman.identity.repo.RevokedTokenRepository
 import com.github.mlwilli.assetman.identity.repo.TenantRepository
 import com.github.mlwilli.assetman.identity.repo.UserRepository
 import com.github.mlwilli.assetman.identity.web.*
-import com.github.mlwilli.assetman.common.security.JwtTokenProvider
-import com.github.mlwilli.assetman.common.security.TenantContext
 import org.slf4j.LoggerFactory
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -31,6 +31,25 @@ class AuthService(
 ) {
 
     private val log = LoggerFactory.getLogger(AuthService::class.java)
+
+    // ==========
+    // Helpers
+    // ==========
+
+    /**
+     * Central helper to build AuthDto from a User.
+     * Ensures we always use the same claims for access tokens.
+     */
+    private fun toAuthDto(user: User): AuthDto {
+        val accessToken = jwtTokenProvider.generateAccessToken(
+            userId = user.id,
+            tenantId = user.tenantId,
+            email = user.email,
+            roles = user.roles.map { it.name }.toSet()
+        )
+        val refreshToken = jwtTokenProvider.generateRefreshToken(user.id)
+        return AuthDto(accessToken, refreshToken)
+    }
 
     // ==========
     // Sign-up & Login
@@ -60,15 +79,7 @@ class AuthService(
             )
         )
 
-        val accessToken = jwtTokenProvider.generateAccessToken(
-            userId = user.id,
-            tenantId = tenant.id,
-            email = user.email,
-            roles = user.roles.map { it.name }.toSet()
-        )
-        val refreshToken = jwtTokenProvider.generateRefreshToken(user.id)
-
-        return AuthDto(accessToken, refreshToken)
+        return toAuthDto(user)
     }
 
     /**
@@ -93,15 +104,7 @@ class AuthService(
             throw BadCredentialsException("Invalid credentials")
         }
 
-        val accessToken = jwtTokenProvider.generateAccessToken(
-            userId = user.id,
-            tenantId = tenant.id,
-            email = user.email,
-            roles = user.roles.map { it.name }.toSet()
-        )
-        val refreshToken = jwtTokenProvider.generateRefreshToken(user.id)
-
-        return AuthDto(accessToken, refreshToken)
+        return toAuthDto(user)
     }
 
     /**
@@ -122,17 +125,7 @@ class AuthService(
             throw BadCredentialsException("User account is disabled")
         }
 
-        val tenantId = user.tenantId
-
-        val accessToken = jwtTokenProvider.generateAccessToken(
-            userId = user.id,
-            tenantId = tenantId,
-            email = user.email,
-            roles = user.roles.map { it.name }.toSet()
-        )
-        val refreshToken = jwtTokenProvider.generateRefreshToken(user.id)
-
-        return AuthDto(accessToken, refreshToken)
+        return toAuthDto(user)
     }
 
     // ==========
@@ -141,10 +134,15 @@ class AuthService(
 
     @Transactional(readOnly = true)
     fun currentUser(): CurrentUserDto {
-        val principal = TenantContext.get() ?: throw BadCredentialsException("Not authenticated")
+        val principal = requireCurrentUser()
 
         val user = userRepository.findById(principal.userId)
             .orElseThrow { IllegalStateException("User not found") }
+
+        // Safety check: should always be true, but we assert to prevent cross-tenant weirdness.
+        if (user.tenantId != principal.tenantId) {
+            throw BadCredentialsException("Cross-tenant access denied")
+        }
 
         return CurrentUserDto(
             userId = user.id,
@@ -183,10 +181,14 @@ class AuthService(
 
     @Transactional
     fun changePassword(request: ChangePasswordRequest) {
-        val principal = TenantContext.get() ?: throw BadCredentialsException("Not authenticated")
+        val principal = requireCurrentUser()
 
         val user = userRepository.findById(principal.userId)
             .orElseThrow { IllegalStateException("User not found") }
+
+        if (user.tenantId != principal.tenantId) {
+            throw BadCredentialsException("Cross-tenant access denied")
+        }
 
         if (!passwordEncoder.matches(request.currentPassword, user.passwordHash)) {
             throw BadCredentialsException("Current password is incorrect")
@@ -201,9 +203,8 @@ class AuthService(
     // ==========
 
     /**
-     * Gen a password reset token for the given email + tenant. eventually send an email;
-     * here we just persist
-     * the token and log it. See dev logs.
+     * Generate a password reset token for the given email + tenant.
+     * Eventually send an email; here we just persist the token and log it for dev.
      */
     @Transactional
     fun forgotPassword(request: ForgotPasswordRequest) {
