@@ -7,6 +7,7 @@ import com.github.mlwilli.assetman.workorder.domain.WorkOrderType
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.time.LocalDate
 import java.util.UUID
 
 interface WorkOrderRepository : JpaRepository<WorkOrder, UUID> {
@@ -43,5 +44,23 @@ interface WorkOrderRepository : JpaRepository<WorkOrder, UUID> {
         @Param("unitId") unitId: UUID?,
         @Param("assignedToUserId") assignedToUserId: UUID?,
         @Param("search") search: String?
+    ): List<WorkOrder>
+
+    /**
+     * Returns all work orders for a tenant whose dueDate is before the given day.
+     * Status filtering (terminal vs non-terminal) is done in the domain/service layer via isOverdue().
+     */
+    @Query(
+        """
+        SELECT w
+        FROM WorkOrder w
+        WHERE w.tenantId = :tenantId
+          AND w.dueDate IS NOT NULL
+          AND w.dueDate < :today
+        """
+    )
+    fun findDueBefore(
+        @Param("tenantId") tenantId: UUID,
+        @Param("today") today: LocalDate
     ): List<WorkOrder>
 }

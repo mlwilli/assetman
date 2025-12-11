@@ -33,4 +33,6 @@ interface UnitRepository : JpaRepository<Unit, UUID> {
         @Param("status") status: UnitStatus?,
         @Param("search") search: String?
     ): List<Unit>
+
+    fun existsByTenantIdAndPropertyId(tenantId: UUID, propertyId: UUID): Boolean
 }

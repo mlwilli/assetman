@@ -1,5 +1,8 @@
 package com.github.mlwilli.assetman.property.service
 
+import com.github.mlwilli.assetman.common.error.NotFoundException
+import com.github.mlwilli.assetman.common.security.TenantContext
+import com.github.mlwilli.assetman.common.security.currentTenantId
 import com.github.mlwilli.assetman.property.domain.Unit
 import com.github.mlwilli.assetman.property.domain.UnitStatus
 import com.github.mlwilli.assetman.property.repo.PropertyRepository
@@ -7,7 +10,7 @@ import com.github.mlwilli.assetman.property.repo.UnitRepository
 import com.github.mlwilli.assetman.property.web.CreateUnitRequest
 import com.github.mlwilli.assetman.property.web.UnitDto
 import com.github.mlwilli.assetman.property.web.UpdateUnitRequest
-import com.github.mlwilli.assetman.common.security.TenantContext
+import com.github.mlwilli.assetman.property.web.toDto
 import jakarta.persistence.EntityNotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -26,6 +29,7 @@ class UnitService(
         search: String?
     ): List<UnitDto> {
         val ctx = TenantContext.get() ?: error("No authenticated user in context")
+
         return unitRepository.search(
             tenantId = ctx.tenantId,
             propertyId = propertyId,
@@ -36,9 +40,9 @@ class UnitService(
 
     @Transactional(readOnly = true)
     fun getUnit(id: UUID): UnitDto {
-        val ctx = TenantContext.get() ?: error("No authenticated user in context")
-        val unit = unitRepository.findByIdAndTenantId(id, ctx.tenantId)
-            ?: throw EntityNotFoundException("Unit not found")
+        val tenantId = currentTenantId()
+        val unit = unitRepository.findByIdAndTenantId(id, tenantId)
+            ?: throw NotFoundException("Unit not found")
         return unit.toDto()
     }
 
@@ -61,8 +65,15 @@ class UnitService(
             areaSqFt = request.areaSqFt,
             monthlyRent = request.monthlyRent,
             currency = request.currency,
-            notes = request.notes
+            availableFrom = request.availableFrom,
+            availableTo = request.availableTo,
+            maxOccupancy = request.maxOccupancy,
+            furnished = request.furnished,
+            externalRef = request.externalRef,
+            notes = request.notes,
+            customFieldsJson = request.customFieldsJson
         )
+
         val saved = unitRepository.save(entity)
         return saved.toDto()
     }
@@ -70,6 +81,7 @@ class UnitService(
     @Transactional
     fun updateUnit(id: UUID, request: UpdateUnitRequest): UnitDto {
         val ctx = TenantContext.get() ?: error("No authenticated user in context")
+
         val unit = unitRepository.findByIdAndTenantId(id, ctx.tenantId)
             ?: throw EntityNotFoundException("Unit not found")
 
@@ -81,7 +93,13 @@ class UnitService(
         unit.areaSqFt = request.areaSqFt
         unit.monthlyRent = request.monthlyRent
         unit.currency = request.currency
+        unit.availableFrom = request.availableFrom
+        unit.availableTo = request.availableTo
+        unit.maxOccupancy = request.maxOccupancy
+        unit.furnished = request.furnished
+        unit.externalRef = request.externalRef
         unit.notes = request.notes
+        unit.customFieldsJson = request.customFieldsJson
 
         val saved = unitRepository.save(unit)
         return saved.toDto()
@@ -90,26 +108,11 @@ class UnitService(
     @Transactional
     fun deleteUnit(id: UUID) {
         val ctx = TenantContext.get() ?: error("No authenticated user in context")
+
         val existing = unitRepository.findByIdAndTenantId(id, ctx.tenantId)
             ?: return
+
+        // later: enforce no active leases, etc.
         unitRepository.delete(existing)
     }
-
-    private fun Unit.toDto(): UnitDto =
-        UnitDto(
-            id = id,
-            tenantId = tenantId,
-            propertyId = propertyId,
-            name = name,
-            floor = floor,
-            status = status,
-            bedrooms = bedrooms,
-            bathrooms = bathrooms,
-            areaSqFt = areaSqFt,
-            monthlyRent = monthlyRent,
-            currency = currency,
-            notes = notes,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-        )
 }

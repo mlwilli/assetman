@@ -14,6 +14,7 @@ class PropertyController(
 ) {
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','TECHNICIAN','VIEWER')")
     fun listProperties(
         @RequestParam(required = false) type: PropertyType?,
         @RequestParam(required = false) search: String?
@@ -21,6 +22,7 @@ class PropertyController(
         propertyService.listProperties(type, search)
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','TECHNICIAN','VIEWER')")
     fun getProperty(@PathVariable id: UUID): PropertyDto =
         propertyService.getProperty(id)
 
@@ -44,7 +46,7 @@ class PropertyController(
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER')")
     fun deleteProperty(@PathVariable id: UUID): ResponseEntity<Void> {
         propertyService.deleteProperty(id)
         return ResponseEntity.noContent().build()

@@ -1,5 +1,8 @@
 package com.github.mlwilli.assetman.workorder.service
 
+import com.github.mlwilli.assetman.common.error.NotFoundException
+import com.github.mlwilli.assetman.common.security.TenantContext
+import com.github.mlwilli.assetman.common.security.currentTenantId
 import com.github.mlwilli.assetman.workorder.domain.WorkOrder
 import com.github.mlwilli.assetman.workorder.domain.WorkOrderPriority
 import com.github.mlwilli.assetman.workorder.domain.WorkOrderStatus
@@ -9,11 +12,11 @@ import com.github.mlwilli.assetman.workorder.web.CreateWorkOrderRequest
 import com.github.mlwilli.assetman.workorder.web.UpdateWorkOrderRequest
 import com.github.mlwilli.assetman.workorder.web.UpdateWorkOrderStatusRequest
 import com.github.mlwilli.assetman.workorder.web.WorkOrderDto
-import com.github.mlwilli.assetman.common.security.TenantContext
-import jakarta.persistence.EntityNotFoundException
+import com.github.mlwilli.assetman.workorder.web.toDto
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 @Service
@@ -33,6 +36,7 @@ class WorkOrderService(
         search: String?
     ): List<WorkOrderDto> {
         val ctx = TenantContext.get() ?: error("No authenticated user in context")
+
         return workOrderRepository.search(
             tenantId = ctx.tenantId,
             status = status,
@@ -48,10 +52,12 @@ class WorkOrderService(
 
     @Transactional(readOnly = true)
     fun getWorkOrder(id: UUID): WorkOrderDto {
-        val ctx = TenantContext.get() ?: error("No authenticated user in context")
-        val wo = workOrderRepository.findByIdAndTenantId(id, ctx.tenantId)
-            ?: throw EntityNotFoundException("Work order not found")
-        return wo.toDto()
+        val tenantId = currentTenantId()
+
+        val workOrder = workOrderRepository.findByIdAndTenantId(id, tenantId)
+            ?: throw NotFoundException("Work order not found")
+
+        return workOrder.toDto()
     }
 
     @Transactional
@@ -62,6 +68,7 @@ class WorkOrderService(
             tenantId = ctx.tenantId,
             title = request.title,
             description = request.description,
+            // status defaults to OPEN
             priority = request.priority,
             type = request.type,
             assetId = request.assetId,
@@ -74,6 +81,7 @@ class WorkOrderService(
             scheduledStart = request.scheduledStart,
             scheduledEnd = request.scheduledEnd,
             estimatedCost = request.estimatedCost,
+            actualCost = null,
             tags = request.tags,
             externalTicketRef = request.externalTicketRef,
             notes = request.notes
@@ -86,26 +94,29 @@ class WorkOrderService(
     @Transactional
     fun updateWorkOrder(id: UUID, request: UpdateWorkOrderRequest): WorkOrderDto {
         val ctx = TenantContext.get() ?: error("No authenticated user in context")
+
         val wo = workOrderRepository.findByIdAndTenantId(id, ctx.tenantId)
-            ?: throw EntityNotFoundException("Work order not found")
+            ?: throw NotFoundException("Work order not found")
 
         wo.title = request.title
         wo.description = request.description
-        wo.status = request.status
+
         wo.priority = request.priority
         wo.type = request.type
+
         wo.assetId = request.assetId
         wo.propertyId = request.propertyId
         wo.unitId = request.unitId
         wo.locationId = request.locationId
         wo.assignedToUserId = request.assignedToUserId
+
         wo.dueDate = request.dueDate
         wo.scheduledStart = request.scheduledStart
         wo.scheduledEnd = request.scheduledEnd
-        wo.startedAt = request.startedAt
-        wo.completedAt = request.completedAt
+
         wo.estimatedCost = request.estimatedCost
         wo.actualCost = request.actualCost
+
         wo.tags = request.tags
         wo.externalTicketRef = request.externalTicketRef
         wo.notes = request.notes
@@ -117,15 +128,16 @@ class WorkOrderService(
     @Transactional
     fun updateStatus(id: UUID, request: UpdateWorkOrderStatusRequest): WorkOrderDto {
         val ctx = TenantContext.get() ?: error("No authenticated user in context")
-        val wo = workOrderRepository.findByIdAndTenantId(id, ctx.tenantId)
-            ?: throw EntityNotFoundException("Work order not found")
 
-        wo.status = request.status
-        if (request.status == WorkOrderStatus.IN_PROGRESS && wo.startedAt == null) {
-            wo.startedAt = Instant.now()
-        }
-        if (request.status == WorkOrderStatus.COMPLETED && wo.completedAt == null) {
-            wo.completedAt = Instant.now()
+        val wo = workOrderRepository.findByIdAndTenantId(id, ctx.tenantId)
+            ?: throw NotFoundException("Work order not found")
+
+        when (request.status) {
+            WorkOrderStatus.IN_PROGRESS -> wo.start(Instant.now())
+            WorkOrderStatus.COMPLETED -> wo.complete(Instant.now())
+            WorkOrderStatus.ON_HOLD -> wo.hold()
+            WorkOrderStatus.CANCELLED -> wo.cancel()
+            WorkOrderStatus.OPEN -> wo.status = WorkOrderStatus.OPEN
         }
 
         val saved = workOrderRepository.save(wo)
@@ -135,36 +147,28 @@ class WorkOrderService(
     @Transactional
     fun deleteWorkOrder(id: UUID) {
         val ctx = TenantContext.get() ?: error("No authenticated user in context")
+
         val wo = workOrderRepository.findByIdAndTenantId(id, ctx.tenantId) ?: return
         workOrderRepository.delete(wo)
     }
 
-    private fun WorkOrder.toDto(): WorkOrderDto =
-        WorkOrderDto(
-            id = id,
-            tenantId = tenantId,
-            title = title,
-            description = description,
-            status = status,
-            priority = priority,
-            type = type,
-            assetId = assetId,
-            propertyId = propertyId,
-            unitId = unitId,
-            locationId = locationId,
-            assignedToUserId = assignedToUserId,
-            createdByUserId = createdByUserId,
-            dueDate = dueDate,
-            scheduledStart = scheduledStart,
-            scheduledEnd = scheduledEnd,
-            startedAt = startedAt,
-            completedAt = completedAt,
-            estimatedCost = estimatedCost,
-            actualCost = actualCost,
-            tags = tags,
-            externalTicketRef = externalTicketRef,
-            notes = notes,
-            createdAt = createdAt,
-            updatedAt = updatedAt
+    /**
+     * SLA / Overdue support:
+     *
+     * Returns all work orders for the current tenant that are "overdue"
+     * according to the domain rule in WorkOrder.isOverdue(today).
+     */
+    @Transactional(readOnly = true)
+    fun listOverdueWorkOrders(today: LocalDate = LocalDate.now()): List<WorkOrderDto> {
+        val ctx = TenantContext.get() ?: error("No authenticated user in context")
+
+        val candidates: List<WorkOrder> = workOrderRepository.findDueBefore(
+            tenantId = ctx.tenantId,
+            today = today
         )
+
+        return candidates
+            .filter { it.isOverdue(today) }
+            .map { it.toDto() }
+    }
 }

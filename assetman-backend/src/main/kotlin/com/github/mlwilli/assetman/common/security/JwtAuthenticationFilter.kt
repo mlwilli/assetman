@@ -27,8 +27,10 @@ class JwtAuthenticationFilter(
                 val user = jwtTokenProvider.parseToken(token)
 
                 if (user != null) {
+                    // Populate TenantContext for domain services
                     TenantContext.set(user)
 
+                    // Populate Spring Security context for @PreAuthorize, etc.
                     val auth = UsernamePasswordAuthenticationToken(
                         user,
                         null,
@@ -41,14 +43,11 @@ class JwtAuthenticationFilter(
 
             chain.doFilter(request, response)
         } finally {
+            // Per-request cleanup
             TenantContext.clear()
             SecurityContextHolder.clearContext()
         }
     }
 
-    override fun shouldNotFilter(req: HttpServletRequest): Boolean {
-        // Public endpoints
-        return req.requestURI.startsWith("/api/auth") ||
-                req.requestURI.startsWith("/actuator/health")
-    }
+    // No shouldNotFilter – we let the filter run for all endpoints.
 }

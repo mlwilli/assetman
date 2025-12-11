@@ -14,6 +14,17 @@ type Query {
   # Single asset by ID (404 if not found / not in tenant)
   asset(id: ID!): Asset
 
+  # Lookup by external reference (tenant-scoped)
+  assetByExternalRef(externalRef: String!): Asset
+
+  # Assets filtered by status + location subtree (rooted at locationId)
+  assetsByStatusAndLocation(
+    status: AssetStatus!
+    locationId: ID!
+    page: Int = 0
+    size: Int = 20
+  ): AssetPage!
+
   # Current authenticated user
   me: CurrentUser!
 }
@@ -29,34 +40,55 @@ type AssetPage {
   totalPages: Int!
 }
 
-
 """
 Asset for the current tenant.
+Fields are aligned with AssetDto.
 """
 type Asset {
   id: ID!
   tenantId: ID!
+
   name: String!
   status: AssetStatus!
+
   category: String
+  code: String
+  assetTag: String
+  manufacturer: String
+  model: String
   serialNumber: String
+
   tags: [String!]!
+
   purchaseDate: String
   purchaseCost: Float
-  locationId: ID
-  assignedUserId: ID
+  inServiceDate: String
+  retiredDate: String
+  disposedDate: String
   warrantyExpiryDate: String
+
+  depreciationYears: Int
+  residualValue: Float
+
+  locationId: ID
+  propertyId: ID
+  unitId: ID
+  assignedUserId: ID
+
+  externalRef: String
   customFieldsJson: String
+
   createdAt: String!
   updatedAt: String!
 }
 
 enum AssetStatus {
-  # Adjust to match your actual enum values
-  ACTIVE
-  INACTIVE
+  PLANNED
+  PROCURED
+  IN_SERVICE
+  UNDER_MAINTENANCE
   RETIRED
-  MAINTENANCE
+  DISPOSED
 }
 
 """

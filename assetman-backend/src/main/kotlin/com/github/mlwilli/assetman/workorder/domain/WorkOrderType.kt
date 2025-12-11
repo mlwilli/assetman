@@ -4,5 +4,6 @@ enum class WorkOrderType {
     PREVENTIVE,
     CORRECTIVE,
     INSPECTION,
+    REPAIR,
     OTHER
 }
