@@ -601,6 +601,134 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Work Orders",
+      "item": [
+        {
+          "name": "Create Work Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Replace filter on RTU-3\",\n  \"description\": \"Quarterly preventive maintenance on rooftop unit 3.\",\n  \"priority\": \"HIGH\",\n  \"type\": \"PREVENTIVE\",\n  \"assetId\": \"{{assetId}}\",\n  \"propertyId\": \"{{propertyId}}\",\n  \"unitId\": \"{{unitId}}\",\n  \"locationId\": null,\n  \"assignedToUserId\": null,\n  \"dueDate\": \"2025-12-15\",\n  \"estimatedCost\": 250.00,\n  \"tags\": \"hvac,filter,pm\",\n  \"externalTicketRef\": \"JIRA-1234\",\n  \"notes\": \"Use OEM filter.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/work-orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "work-orders"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Work Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/work-orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "work-orders"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Work Orders (By Asset)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/work-orders?assetId={{assetId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "work-orders"],
+              "query": [
+                { "key": "assetId", "value": "{{assetId}}" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Work Order By Id",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/work-orders/{{workOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "work-orders", "{{workOrderId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Work Order",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Replace filter on RTU-3 (updated)\",\n  \"description\": \"Include belt inspection.\",\n  \"status\": \"IN_PROGRESS\",\n  \"priority\": \"CRITICAL\",\n  \"type\": \"PREVENTIVE\",\n  \"assetId\": \"{{assetId}}\",\n  \"propertyId\": \"{{propertyId}}\",\n  \"unitId\": \"{{unitId}}\",\n  \"locationId\": null,\n  \"assignedToUserId\": null,\n  \"dueDate\": \"2025-12-16\",\n  \"scheduledStart\": null,\n  \"scheduledEnd\": null,\n  \"startedAt\": null,\n  \"completedAt\": null,\n  \"estimatedCost\": 275.00,\n  \"actualCost\": null,\n  \"tags\": \"hvac,filter,pm,urgent\",\n  \"externalTicketRef\": \"JIRA-1234\",\n  \"notes\": \"Escalated by building manager.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/work-orders/{{workOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "work-orders", "{{workOrderId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Work Order Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"COMPLETED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/work-orders/{{workOrderId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "work-orders", "{{workOrderId}}", "status"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Work Order",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/work-orders/{{workOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "work-orders", "{{workOrderId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": []
