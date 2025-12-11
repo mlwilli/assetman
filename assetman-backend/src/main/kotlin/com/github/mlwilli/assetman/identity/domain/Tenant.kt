@@ -1,6 +1,6 @@
 package com.github.mlwilli.assetman.identity.domain
 
-import com.github.mlwilli.assetman.shared.domain.BaseEntity
+import com.github.mlwilli.assetman.common.domain.BaseEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Table

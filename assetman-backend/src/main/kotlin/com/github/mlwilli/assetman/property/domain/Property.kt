@@ -1,9 +1,8 @@
 package com.github.mlwilli.assetman.property.domain
 
-import com.github.mlwilli.assetman.shared.domain.BaseEntity
-import com.github.mlwilli.assetman.shared.domain.TenantScoped
+import com.github.mlwilli.assetman.common.domain.BaseEntity
+import com.github.mlwilli.assetman.common.domain.TenantScoped
 import jakarta.persistence.*
-import java.math.BigDecimal
 import java.util.UUID
 
 @Entity

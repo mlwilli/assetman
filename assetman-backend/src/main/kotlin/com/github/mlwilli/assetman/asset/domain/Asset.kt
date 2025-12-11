@@ -1,7 +1,7 @@
 package com.github.mlwilli.assetman.asset.domain
 
-import com.github.mlwilli.assetman.shared.domain.BaseEntity
-import com.github.mlwilli.assetman.shared.domain.TenantScoped
+import com.github.mlwilli.assetman.common.domain.BaseEntity
+import com.github.mlwilli.assetman.common.domain.TenantScoped
 import jakarta.persistence.*
 import java.math.BigDecimal
 import java.time.LocalDate

@@ -6,12 +6,11 @@ import com.github.mlwilli.assetman.asset.repo.AssetRepository
 import com.github.mlwilli.assetman.asset.web.AssetDto
 import com.github.mlwilli.assetman.asset.web.CreateAssetRequest
 import com.github.mlwilli.assetman.asset.web.UpdateAssetRequest
-import com.github.mlwilli.assetman.shared.security.TenantContext
-import jakarta.persistence.EntityNotFoundException
+import com.github.mlwilli.assetman.common.error.NotFoundException
+import com.github.mlwilli.assetman.common.security.currentTenantId
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 @Service
@@ -19,36 +18,16 @@ class AssetService(
     private val assetRepository: AssetRepository
 ) {
 
-    @Transactional(readOnly = true)
-    fun listAssetsForCurrentTenant(
-        status: AssetStatus?,
-        search: String?,
-        pageable: Pageable
-    ): Page<AssetDto> {
-        val current = TenantContext.get() ?: error("No authenticated user in context")
-        val page = assetRepository.search(current.tenantId, status, search, pageable)
-        return page.map { it.toDto() }
-    }
-
-    @Transactional(readOnly = true)
-    fun getAsset(id: UUID): AssetDto {
-        val current = TenantContext.get() ?: error("No authenticated user in context")
-        val asset = assetRepository.findByIdAndTenantId(id, current.tenantId)
-            ?: throw EntityNotFoundException("Asset not found")
-        return asset.toDto()
-    }
-
-    @Transactional
     fun createAsset(request: CreateAssetRequest): AssetDto {
-        val current = TenantContext.get() ?: error("No authenticated user in context")
+        val tenantId = currentTenantId()
 
         val asset = Asset(
-            tenantId = current.tenantId,
+            tenantId = tenantId,
             name = request.name,
-            status = request.status ?: AssetStatus.PLANNED,
+            status = request.status ?: AssetStatus.IN_SERVICE, // or enforce non-null via validation
+            tags = request.tags?.joinToString(","),
             category = request.category,
             serialNumber = request.serialNumber,
-            tags = request.tags?.joinToString(","),
             purchaseDate = request.purchaseDate,
             purchaseCost = request.purchaseCost,
             locationId = request.locationId,
@@ -58,18 +37,36 @@ class AssetService(
         )
 
         val saved = assetRepository.save(asset)
-        return saved.toDto()
+        return toDto(saved)
     }
 
-    @Transactional
-    fun updateAsset(id: UUID, request: UpdateAssetRequest): AssetDto {
-        val current = TenantContext.get() ?: error("No authenticated user in context")
+    fun getAsset(id: UUID): AssetDto {
+        val tenantId = currentTenantId()
 
-        val asset = assetRepository.findByIdAndTenantId(id, current.tenantId)
-            ?: throw EntityNotFoundException("Asset not found")
+        val asset = assetRepository.findByIdAndTenantId(id, tenantId)
+            ?: throw NotFoundException("Asset not found")
+
+        return toDto(asset)
+    }
+
+    fun listAssetsForCurrentTenant(
+        status: AssetStatus?,
+        search: String?,
+        pageable: Pageable
+    ): Page<AssetDto> {
+        val tenantId = currentTenantId()
+        val page = assetRepository.search(tenantId, status, search, pageable)
+        return page.map { asset -> toDto(asset) }
+    }
+
+    fun updateAsset(id: UUID, request: UpdateAssetRequest): AssetDto {
+        val tenantId = currentTenantId()
+
+        val asset = assetRepository.findByIdAndTenantId(id, tenantId)
+            ?: throw NotFoundException("Asset not found")
 
         asset.name = request.name
-        asset.status = request.status ?: asset.status
+        asset.status = request.status!! // validated as @NotNull
         asset.category = request.category
         asset.serialNumber = request.serialNumber
         asset.tags = request.tags?.joinToString(",")
@@ -80,34 +77,42 @@ class AssetService(
         asset.warrantyExpiryDate = request.warrantyExpiryDate
         asset.customFieldsJson = request.customFieldsJson
 
-        val saved = assetRepository.save(asset)
-        return saved.toDto()
+        val updated = assetRepository.save(asset)
+        return toDto(updated)
     }
 
-    @Transactional
     fun deleteAsset(id: UUID) {
-        val current = TenantContext.get() ?: error("No authenticated user in context")
-        val asset = assetRepository.findByIdAndTenantId(id, current.tenantId)
-            ?: return
+        val tenantId = currentTenantId()
+
+        val asset = assetRepository.findByIdAndTenantId(id, tenantId)
+            ?: throw NotFoundException("Asset not found")
+
         assetRepository.delete(asset)
     }
 
-    private fun Asset.toDto(): AssetDto =
+    // --- mapping ---
+
+    private fun toDto(asset: Asset): AssetDto =
         AssetDto(
-            id = id,
-            tenantId = tenantId,
-            name = name,
-            status = status,
-            category = category,
-            serialNumber = serialNumber,
-            tags = tags?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList(),
-            purchaseDate = purchaseDate,
-            purchaseCost = purchaseCost,
-            locationId = locationId,
-            assignedUserId = assignedUserId,
-            warrantyExpiryDate = warrantyExpiryDate,
-            customFieldsJson = customFieldsJson,
-            createdAt = createdAt,
-            updatedAt = updatedAt
+            id = asset.id,
+            tenantId = asset.tenantId,
+            name = asset.name,
+            status = asset.status,
+            category = asset.category,
+            serialNumber = asset.serialNumber,
+            // entity.tags: String? -> DTO: List<String>
+            tags = asset.tags
+                ?.split(',')
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() }
+                ?: emptyList(),
+            purchaseDate = asset.purchaseDate,
+            purchaseCost = asset.purchaseCost,
+            locationId = asset.locationId,
+            assignedUserId = asset.assignedUserId,
+            warrantyExpiryDate = asset.warrantyExpiryDate,
+            customFieldsJson = asset.customFieldsJson,
+            createdAt = asset.createdAt,
+            updatedAt = asset.updatedAt
         )
 }

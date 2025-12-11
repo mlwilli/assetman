@@ -1,0 +1,71 @@
+schema {
+  query: Query
+}
+
+type Query {
+  # Paged assets for current tenant
+  assets(
+    status: AssetStatus
+    search: String
+    page: Int = 0
+    size: Int = 20
+  ): AssetPage!
+
+  # Single asset by ID (404 if not found / not in tenant)
+  asset(id: ID!): Asset
+
+  # Current authenticated user
+  me: CurrentUser!
+}
+
+"""
+Page wrapper for assets.
+"""
+type AssetPage {
+  content: [Asset!]!
+  page: Int!
+  size: Int!
+  totalElements: Int!
+  totalPages: Int!
+}
+
+
+"""
+Asset for the current tenant.
+"""
+type Asset {
+  id: ID!
+  tenantId: ID!
+  name: String!
+  status: AssetStatus!
+  category: String
+  serialNumber: String
+  tags: [String!]!
+  purchaseDate: String
+  purchaseCost: Float
+  locationId: ID
+  assignedUserId: ID
+  warrantyExpiryDate: String
+  customFieldsJson: String
+  createdAt: String!
+  updatedAt: String!
+}
+
+enum AssetStatus {
+  # Adjust to match your actual enum values
+  ACTIVE
+  INACTIVE
+  RETIRED
+  MAINTENANCE
+}
+
+"""
+Currently logged-in user.
+"""
+type CurrentUser {
+  userId: ID!
+  tenantId: ID!
+  email: String!
+  fullName: String!
+  roles: [String!]!
+}

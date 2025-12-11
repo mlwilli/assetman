@@ -7,7 +7,7 @@ import com.github.mlwilli.assetman.location.web.CreateLocationRequest
 import com.github.mlwilli.assetman.location.web.LocationDto
 import com.github.mlwilli.assetman.location.web.LocationTreeNodeDto
 import com.github.mlwilli.assetman.location.web.UpdateLocationRequest
-import com.github.mlwilli.assetman.shared.security.TenantContext
+import com.github.mlwilli.assetman.common.security.TenantContext
 import jakarta.persistence.EntityNotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

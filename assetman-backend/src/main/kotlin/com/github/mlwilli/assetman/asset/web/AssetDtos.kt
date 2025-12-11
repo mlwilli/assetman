@@ -24,38 +24,4 @@ data class AssetDto(
     val updatedAt: Instant
 )
 
-data class CreateAssetRequest(
-    val name: String,
-    val status: AssetStatus? = null,
-    val category: String? = null,
-    val serialNumber: String? = null,
-    val tags: List<String>? = null,
-    val purchaseDate: LocalDate? = null,
-    val purchaseCost: BigDecimal? = null,
-    val locationId: UUID? = null,
-    val assignedUserId: UUID? = null,
-    val warrantyExpiryDate: LocalDate? = null,
-    val customFieldsJson: String? = null
-)
 
-data class UpdateAssetRequest(
-    val name: String,
-    val status: AssetStatus? = null,
-    val category: String? = null,
-    val serialNumber: String? = null,
-    val tags: List<String>? = null,
-    val purchaseDate: LocalDate? = null,
-    val purchaseCost: BigDecimal? = null,
-    val locationId: UUID? = null,
-    val assignedUserId: UUID? = null,
-    val warrantyExpiryDate: LocalDate? = null,
-    val customFieldsJson: String? = null
-)
-
-data class PageResponse<T>(
-    val content: List<T>,
-    val page: Int,
-    val size: Int,
-    val totalElements: Long,
-    val totalPages: Int
-)
