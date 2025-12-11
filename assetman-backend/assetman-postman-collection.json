@@ -423,6 +423,184 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Properties & Units",
+      "item": [
+        {
+          "name": "Create Property",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Boise HQ\",\n  \"type\": \"COMMERCIAL\",\n  \"code\": \"BOISE-HQ\",\n  \"locationId\": null,\n  \"addressLine1\": \"123 Main St\",\n  \"city\": \"Boise\",\n  \"state\": \"ID\",\n  \"postalCode\": \"83701\",\n  \"country\": \"USA\",\n  \"notes\": \"Primary headquarters building.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/properties",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "properties"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Properties",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/properties",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "properties"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Property By Id",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/properties/{{propertyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "properties", "{{propertyId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Property",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Boise HQ - Updated\",\n  \"type\": \"COMMERCIAL\",\n  \"code\": \"BOISE-HQ\",\n  \"locationId\": null,\n  \"addressLine1\": \"123 Main St\",\n  \"city\": \"Boise\",\n  \"state\": \"ID\",\n  \"postalCode\": \"83701\",\n  \"country\": \"USA\",\n  \"notes\": \"Updated notes.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/properties/{{propertyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "properties", "{{propertyId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Property",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/properties/{{propertyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "properties", "{{propertyId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Unit",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": \"{{propertyId}}\",\n  \"name\": \"Suite 301\",\n  \"floor\": \"3\",\n  \"status\": \"VACANT\",\n  \"bedrooms\": null,\n  \"bathrooms\": null,\n  \"areaSqFt\": 2500.00,\n  \"monthlyRent\": 5500.00,\n  \"currency\": \"USD\",\n  \"notes\": \"Corner suite, great light.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/units",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "units"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Units",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/units?propertyId={{propertyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "units"],
+              "query": [
+                { "key": "propertyId", "value": "{{propertyId}}" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Unit By Id",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/units/{{unitId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "units", "{{unitId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Unit",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Suite 301 - Updated\",\n  \"floor\": \"3\",\n  \"status\": \"OCCUPIED\",\n  \"bedrooms\": null,\n  \"bathrooms\": null,\n  \"areaSqFt\": 2500.00,\n  \"monthlyRent\": 6000.00,\n  \"currency\": \"USD\",\n  \"notes\": \"Now leased to ACME.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/units/{{unitId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "units", "{{unitId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Unit",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/units/{{unitId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "units", "{{unitId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": []
