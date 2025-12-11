@@ -46,6 +46,9 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.testcontainers:postgresql:1.20.2")
     testImplementation("org.testcontainers:junit-jupiter:1.20.2")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
+
+
     runtimeOnly("com.h2database:h2")
 }
 

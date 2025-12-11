@@ -6,5 +6,6 @@ enum class Role {
     MANAGER,
     TECHNICIAN,
     VIEWER,
-    ACCOUNTANT
+    ACCOUNTANT,
+    USER
 }

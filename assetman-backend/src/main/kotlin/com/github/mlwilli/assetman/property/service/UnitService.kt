@@ -7,7 +7,7 @@ import com.github.mlwilli.assetman.property.repo.UnitRepository
 import com.github.mlwilli.assetman.property.web.CreateUnitRequest
 import com.github.mlwilli.assetman.property.web.UnitDto
 import com.github.mlwilli.assetman.property.web.UpdateUnitRequest
-import com.github.mlwilli.assetman.shared.security.TenantContext
+import com.github.mlwilli.assetman.common.security.TenantContext
 import jakarta.persistence.EntityNotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

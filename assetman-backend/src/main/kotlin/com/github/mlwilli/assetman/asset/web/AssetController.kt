@@ -2,6 +2,7 @@ package com.github.mlwilli.assetman.asset.web
 
 import com.github.mlwilli.assetman.asset.domain.AssetStatus
 import com.github.mlwilli.assetman.asset.service.AssetService
+import com.github.mlwilli.assetman.common.web.PageResponse
 import org.springframework.data.domain.PageRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -28,8 +29,7 @@ class AssetController(
             page = result.number,
             size = result.size,
             totalElements = result.totalElements,
-            totalPages = result.totalPages
-        )
+            totalPages = result.totalPages)
     }
 
     @GetMapping("/{id}")
