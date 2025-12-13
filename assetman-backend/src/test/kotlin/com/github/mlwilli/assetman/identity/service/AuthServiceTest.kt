@@ -13,7 +13,6 @@ import org.mockito.ArgumentCaptor
 import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
-import org.slf4j.LoggerFactory
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.crypto.password.PasswordEncoder
 import java.time.Instant
@@ -143,7 +142,7 @@ class AuthServiceTest {
         setBaseFields(user, userId)
 
         Mockito.`when`(tenantRepository.findBySlug(eq("acme"))).thenReturn(tenant)
-        Mockito.`when`(userRepository.findByEmailAndTenantId(eq("user@acme.test"), eq(tenantId))).thenReturn(user)
+        Mockito.`when`(userRepository.findByTenantIdAndEmail(eq(tenantId), eq("user@acme.test"))).thenReturn(user)
         Mockito.`when`(passwordEncoder.matches(eq("pw"), eq("hashed"))).thenReturn(true)
         Mockito.`when`(
             jwtTokenProvider.generateAccessToken(
@@ -184,7 +183,7 @@ class AuthServiceTest {
         setBaseFields(user, userId)
 
         Mockito.`when`(tenantRepository.findBySlug(eq("acme"))).thenReturn(tenant)
-        Mockito.`when`(userRepository.findByEmailAndTenantId(eq("user@acme.test"), eq(tenantId))).thenReturn(user)
+        Mockito.`when`(userRepository.findByTenantIdAndEmail(eq(tenantId), eq("user@acme.test"))).thenReturn(user)
         Mockito.`when`(passwordEncoder.matches(eq("wrong"), eq("hashed"))).thenReturn(false)
 
         assertThrows<BadCredentialsException> {
@@ -326,7 +325,7 @@ class AuthServiceTest {
         setBaseFields(user, userId)
 
         Mockito.`when`(tenantRepository.findBySlug(eq("acme"))).thenReturn(tenant)
-        Mockito.`when`(userRepository.findByEmailAndTenantId(eq("user@acme.test"), eq(tenantId))).thenReturn(user)
+        Mockito.`when`(userRepository.findByTenantIdAndEmail(eq(tenantId), eq("user@acme.test"))).thenReturn(user)
 
         val captor = ArgumentCaptor.forClass(PasswordResetToken::class.java)
         Mockito.`when`(passwordResetTokenRepository.save(any())).thenAnswer { it.arguments[0] }

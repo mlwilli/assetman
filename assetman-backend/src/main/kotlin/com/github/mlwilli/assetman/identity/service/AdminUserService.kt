@@ -38,7 +38,7 @@ class AdminUserService(
         val tenantId = currentTenantId()
 
         // Check email only within the current tenant (no cross-tenant info leak).
-        val existing = userRepository.findByEmailAndTenantId(request.email, tenantId)
+        val existing = userRepository.findByTenantIdAndEmail(tenantId, request.email)
         if (existing != null) {
             throw ConflictException("A user with this email already exists in the tenant")
         }

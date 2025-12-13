@@ -120,7 +120,7 @@ class AdminUserServiceTest {
 
         // No existing user with that email in this tenant
         Mockito.`when`(
-            userRepository.findByEmailAndTenantId(request.email, tenantId)
+            userRepository.findByTenantIdAndEmail(tenantId, request.email)
         ).thenReturn(null)
 
         Mockito.`when`(
@@ -172,7 +172,7 @@ class AdminUserServiceTest {
         )
 
         Mockito.`when`(
-            userRepository.findByEmailAndTenantId(request.email, tenantId)
+            userRepository.findByTenantIdAndEmail(tenantId, request.email)
         ).thenReturn(existingUser)
 
         // when + then

@@ -24,7 +24,16 @@ class JwtAuthenticationFilter(
 
             if (header != null && header.startsWith("Bearer ")) {
                 val token = header.substring(7)
-                val user = jwtTokenProvider.parseToken(token)
+
+                val user = try {
+                    jwtTokenProvider.parseToken(token)
+                } catch (ex: Exception) {
+                    // Any parse/validation failure must be treated as "unauthenticated"
+                    // so clients can refresh tokens correctly.
+                    SecurityContextHolder.clearContext()
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired token")
+                    return
+                }
 
                 if (user != null) {
                     // Populate TenantContext for domain services
@@ -36,16 +45,24 @@ class JwtAuthenticationFilter(
                         null,
                         user.roles.map { SimpleGrantedAuthority("ROLE_$it") }
                     )
-
                     SecurityContextHolder.getContext().authentication = auth
+                } else {
+                    // Token present but did not resolve to a user => unauthenticated
+                    SecurityContextHolder.clearContext()
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired token")
+                    return
                 }
             }
 
             chain.doFilter(request, response)
         } finally {
             // Per-request cleanup
+            // TenantContext is ours to manage per request.
             TenantContext.clear()
-            SecurityContextHolder.clearContext()
+
+            // IMPORTANT:
+            // Do NOT clear SecurityContextHolder here. Spring Security manages it.
+            // Clearing it here can interfere with downstream authorization/exception handling.
         }
     }
 

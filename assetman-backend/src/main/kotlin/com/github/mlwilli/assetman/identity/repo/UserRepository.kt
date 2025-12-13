@@ -8,7 +8,9 @@ import java.util.UUID
 
 interface UserRepository : JpaRepository<User, UUID> {
 
-    fun findByEmailAndTenantId(email: String, tenantId: UUID): User?
+    fun findByTenantIdAndEmailIgnoreCase(tenantId: UUID, email: String): User?
+
+    fun findByTenantIdAndEmail(tenantId: UUID, email: String): User?
 
     fun findByEmailIgnoreCase(email: String): User?
 
