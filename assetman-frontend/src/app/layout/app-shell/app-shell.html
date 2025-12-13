@@ -1,0 +1,39 @@
+<mat-sidenav-container class="shell">
+  <mat-sidenav class="sidenav" mode="side" opened>
+    <div class="brand">
+      <div class="brand-title">AssetMan</div>
+      <div class="brand-sub">Enterprise Asset Management</div>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <mat-nav-list>
+      <a
+        mat-list-item
+        *ngFor="let item of navItems"
+        [routerLink]="item.link"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+      >
+        <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+        <span matListItemTitle>{{ item.label }}</span>
+      </a>
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="content">
+    <mat-toolbar class="toolbar" color="primary">
+      <span class="toolbar-title">AssetMan</span>
+      <span class="spacer"></span>
+
+      <ng-container *ngIf="(user$ | async) as u">
+        <span class="user">{{ userLabel() }}</span>
+        <button mat-button (click)="logout()">Logout</button>
+      </ng-container>
+    </mat-toolbar>
+
+    <main class="main">
+      <router-outlet></router-outlet>
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

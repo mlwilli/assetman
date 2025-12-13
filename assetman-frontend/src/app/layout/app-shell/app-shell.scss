@@ -1,0 +1,48 @@
+.shell {
+  height: 100vh;
+}
+
+.sidenav {
+  width: 260px;
+}
+
+.brand {
+  padding: 16px;
+}
+
+.brand-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.brand-sub {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.toolbar-title {
+  font-weight: 600;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.user {
+  margin-right: 12px;
+  opacity: 0.95;
+}
+
+.main {
+  padding: 16px;
+}
+
+a.active {
+  font-weight: 600;
+}

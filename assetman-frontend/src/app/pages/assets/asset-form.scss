@@ -1,0 +1,51 @@
+.card {
+  padding: 16px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.title {
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.form {
+  margin-top: 8px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.full {
+  grid-column: 1 / -1;
+}
+
+.footer {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.error {
+  padding: 12px 0;
+}
+
+.error-message {
+  margin-top: 6px;
+  opacity: 0.9;
+}

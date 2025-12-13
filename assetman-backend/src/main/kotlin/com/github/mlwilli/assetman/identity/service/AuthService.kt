@@ -93,7 +93,7 @@ class AuthService(
         val tenant = tenantRepository.findBySlug(tenantSlug)
             ?: throw BadCredentialsException("Invalid credentials")
 
-        val user = userRepository.findByEmailAndTenantId(email, tenant.id)
+        val user = userRepository.findByTenantIdAndEmail(tenant.id, email)
             ?: throw BadCredentialsException("Invalid credentials")
 
         if (!user.active) {
@@ -217,7 +217,7 @@ class AuthService(
                 return // do not leak which tenants / users exist
             }
 
-        val user = userRepository.findByEmailAndTenantId(email, tenant.id)
+        val user = userRepository.findByTenantIdAndEmail(tenant.id, email)
             ?: run {
                 log.info("Forgot password for unknown user: {} in tenant {}", email, tenant.id)
                 return

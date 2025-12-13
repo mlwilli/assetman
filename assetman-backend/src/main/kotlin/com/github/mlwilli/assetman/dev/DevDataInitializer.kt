@@ -1,155 +1,53 @@
 package com.github.mlwilli.assetman.dev
 
-import com.github.mlwilli.assetman.asset.domain.Asset
-import com.github.mlwilli.assetman.asset.domain.AssetStatus
-import com.github.mlwilli.assetman.asset.repo.AssetRepository
 import com.github.mlwilli.assetman.identity.domain.Role
 import com.github.mlwilli.assetman.identity.domain.Tenant
 import com.github.mlwilli.assetman.identity.domain.User
 import com.github.mlwilli.assetman.identity.repo.TenantRepository
 import com.github.mlwilli.assetman.identity.repo.UserRepository
-import com.github.mlwilli.assetman.location.domain.Location
-import com.github.mlwilli.assetman.location.domain.LocationType
-import com.github.mlwilli.assetman.location.repo.LocationRepository
-import com.github.mlwilli.assetman.property.domain.Property
-import com.github.mlwilli.assetman.property.domain.PropertyType
-import com.github.mlwilli.assetman.property.domain.Unit
-import com.github.mlwilli.assetman.property.domain.UnitStatus
-import com.github.mlwilli.assetman.property.repo.PropertyRepository
-import com.github.mlwilli.assetman.property.repo.UnitRepository
 import org.slf4j.LoggerFactory
-import org.springframework.boot.CommandLineRunner
-import org.springframework.context.annotation.Profile
-import org.springframework.stereotype.Component
+import org.springframework.context.event.EventListener
+import org.springframework.core.env.Environment
 import org.springframework.security.crypto.password.PasswordEncoder
-import java.math.BigDecimal
-import java.time.LocalDate
+import org.springframework.stereotype.Component
+import org.springframework.boot.context.event.ApplicationReadyEvent
 
-@Profile("dev")
 @Component
 class DevDataInitializer(
+    private val env: Environment,
     private val tenantRepository: TenantRepository,
     private val userRepository: UserRepository,
-    private val passwordEncoder: PasswordEncoder,
-    private val locationRepository: LocationRepository,
-    private val propertyRepository: PropertyRepository,
-    private val unitRepository: UnitRepository,
-    private val assetRepository: AssetRepository
-) : CommandLineRunner {
+    private val passwordEncoder: PasswordEncoder
+) {
+    private val log = LoggerFactory.getLogger(DevDataInitializer::class.java)
 
-    // Test Values. Obviously fake data
+    @EventListener(ApplicationReadyEvent::class)
+    fun seed() {
+        if (!env.activeProfiles.contains("dev")) return
+        //todo: Demo auth removal
+        val tenantSlug = System.getenv("ASSETMAN_DEV_TENANT_SLUG") ?: "demo"
+        val tenantName = System.getenv("ASSETMAN_DEV_TENANT_NAME") ?: "Demo Tenant"
+        val adminEmail = System.getenv("ASSETMAN_DEV_ADMIN_EMAIL") ?: "admin@demo.com"
+        val adminName = System.getenv("ASSETMAN_DEV_ADMIN_NAME") ?: "Demo Admin"
+        val adminPassword = System.getenv("ASSETMAN_DEV_ADMIN_PASSWORD") ?: "DemoPass!"
 
-    private val log = LoggerFactory.getLogger(javaClass)
+        val tenant = tenantRepository.findBySlug(tenantSlug)
+            ?: tenantRepository.save(Tenant(name = tenantName, slug = tenantSlug))
 
-    override fun run(vararg args: String?) {
-        // Avoid reseeding if demo tenant already exists
-        val existing = tenantRepository.findBySlug("demo")
-        if (existing != null) {
-            log.info("DevDataInitializer: demo tenant already exists, skipping seeding.")
-            return
+        val existingAdmin = userRepository.findByTenantIdAndEmailIgnoreCase(tenant.id, adminEmail)
+
+        if (existingAdmin == null) {
+            val user = User(
+                tenantId = tenant.id,
+                email = adminEmail,
+                fullName = adminName,
+                passwordHash = passwordEncoder.encode(adminPassword),
+                roles = setOf(Role.OWNER, Role.ADMIN)
+            )
+            userRepository.save(user)
+            log.info("DEV seed created: tenantSlug='{}', adminEmail='{}'", tenantSlug, adminEmail)
+        } else {
+            log.info("DEV seed exists: tenantSlug='{}', adminEmail='{}'", tenantSlug, adminEmail)
         }
-
-        log.info("DevDataInitializer: seeding demo data...")
-
-        // --- Tenant ---
-        val tenant = tenantRepository.save(
-            Tenant(
-                name = "Demo Organization",
-                slug = "demo"
-            )
-        )
-
-        // --- Users ---
-        val ownerAdminUser = userRepository.save(
-            User(
-                tenantId = tenant.id,
-                fullName = "Demo Owner",
-                email = "owner@demo.test",
-                passwordHash = passwordEncoder.encode("Password123!"),
-                displayName = "Demo Owner",
-                roles = setOf(Role.OWNER, Role.ADMIN) as MutableSet<Role>,
-                active = true
-            )
-        )
-
-        // --- Locations ---
-        val hqLocation = locationRepository.save(
-            Location(
-                tenantId = tenant.id,
-                name = "HQ - Main Campus",
-                type = LocationType.SITE,
-                parentId = null,
-                path = null
-            )
-        )
-
-        val buildingALocation = locationRepository.save(
-            Location(
-                tenantId = tenant.id,
-                name = "Building A - Floor 1",
-                type = LocationType.FLOOR,
-                parentId = hqLocation.id,
-                path = null
-            )
-        )
-
-        // --- Properties ---
-        val demoProperty = propertyRepository.save(
-            Property(
-                tenantId = tenant.id,
-                name = "Demo Property",
-                type = PropertyType.RESIDENTIAL,
-                notes = "Sample property for dev/testing",
-                code = "PROP-DEMO-001",
-                addressLine1 = "123 Demo Street",
-                addressLine2 = null,
-                city = "Demo City",
-                state = "DE",
-                postalCode = "12345",
-                country = "US",
-                locationId = buildingALocation.id
-            )
-        )
-
-        // --- Units ---
-        val unit101 = unitRepository.save(
-            Unit(
-                tenantId = tenant.id,
-                propertyId = demoProperty.id,
-                name = "Unit 101",
-                notes = "Sample unit 101",
-                status = UnitStatus.OCCUPIED,
-                bedrooms = 2,
-                bathrooms = 1,
-                floor = "1",
-                areaSqFt = BigDecimal("850"),
-                currency = "USD",
-                monthlyRent = BigDecimal("1500.00")
-            )
-        )
-
-        // --- Assets ---
-        val boilerAsset = assetRepository.save(
-            Asset(
-                tenantId = tenant.id,
-                name = "Boiler - Unit 101",
-                status = AssetStatus.IN_SERVICE,
-                tags = "boiler, hvac",
-                warrantyExpiryDate = LocalDate.now().plusYears(1),
-                purchaseCost = BigDecimal("5000.00"),
-                customFieldsJson = """{"model":"B-1000","manufacturer":"Acme Heating"}""",
-                category = "HVAC",
-                purchaseDate = LocalDate.now().minusYears(2),
-                serialNumber = "HVAC-BOILER-001",
-                locationId = buildingALocation.id,
-                assignedUserId = ownerAdminUser.id
-            )
-        )
-
-        log.info("DevDataInitializer: demo data seeded.")
-        log.info("Dev tenant slug: demo")
-        log.info("Dev owner/admin email: owner@demo.test")
-        log.info("Dev owner/admin password: Password123!")
-        log.info("Sample asset id: {}", boilerAsset.id)
     }
 }

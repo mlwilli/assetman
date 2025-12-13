@@ -1,0 +1,151 @@
+<mat-card class="card">
+  <ng-container *ngIf="state$ | async as s">
+    <mat-progress-bar *ngIf="s.kind === 'loading'" mode="indeterminate"></mat-progress-bar>
+
+    <div class="error" *ngIf="s.kind === 'error'">
+      <strong>Unable to load form.</strong>
+      <div class="error-message">{{ s.message }}</div>
+      <div class="actions">
+        <a mat-button routerLink="/assets">Back to Assets</a>
+      </div>
+    </div>
+
+    <ng-container *ngIf="s.kind === 'ready'">
+      <div class="header">
+        <h2 class="title">
+          {{ s.mode === 'create' ? 'Create Asset' : 'Edit Asset' }}
+        </h2>
+
+        <div class="actions">
+          <a mat-button routerLink="/assets">Cancel</a>
+          <a *ngIf="s.mode === 'edit' && s.asset" mat-button [routerLink]="['/assets', s.asset.id]">View</a>
+        </div>
+      </div>
+
+      <form class="form" [formGroup]="form" (ngSubmit)="submit(s.mode, s.asset)">
+        <div class="grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="name" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Status</mat-label>
+            <input matInput formControlName="status" placeholder="(free text)" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Category</mat-label>
+            <input matInput formControlName="category" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Code</mat-label>
+            <input matInput formControlName="code" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Asset Tag</mat-label>
+            <input matInput formControlName="assetTag" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Serial Number</mat-label>
+            <input matInput formControlName="serialNumber" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Manufacturer</mat-label>
+            <input matInput formControlName="manufacturer" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Model</mat-label>
+            <input matInput formControlName="model" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>External Ref</mat-label>
+            <input matInput formControlName="externalRef" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Tags (comma-separated)</mat-label>
+            <input matInput formControlName="tagsCsv" placeholder="e.g. electrical, floor-2, critical" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Location ID</mat-label>
+            <input matInput formControlName="locationId" placeholder="UUID" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Property ID</mat-label>
+            <input matInput formControlName="propertyId" placeholder="UUID" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Unit ID</mat-label>
+            <input matInput formControlName="unitId" placeholder="UUID" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Assigned User ID</mat-label>
+            <input matInput formControlName="assignedUserId" placeholder="UUID" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Purchase Date</mat-label>
+            <input matInput formControlName="purchaseDate" placeholder="YYYY-MM-DD" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>In Service Date</mat-label>
+            <input matInput formControlName="inServiceDate" placeholder="YYYY-MM-DD" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Retired Date</mat-label>
+            <input matInput formControlName="retiredDate" placeholder="YYYY-MM-DD" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Disposed Date</mat-label>
+            <input matInput formControlName="disposedDate" placeholder="YYYY-MM-DD" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Warranty Expiry</mat-label>
+            <input matInput formControlName="warrantyExpiryDate" placeholder="YYYY-MM-DD" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Purchase Cost</mat-label>
+            <input matInput formControlName="purchaseCost" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Residual Value</mat-label>
+            <input matInput formControlName="residualValue" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Depreciation Years</mat-label>
+            <input matInput formControlName="depreciationYears" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Custom Fields JSON</mat-label>
+            <textarea matInput rows="5" formControlName="customFieldsJson"></textarea>
+          </mat-form-field>
+        </div>
+
+        <div class="footer">
+          <button mat-raised-button color="primary" type="submit">
+            {{ s.mode === 'create' ? 'Create' : 'Save' }}
+          </button>
+        </div>
+      </form>
+    </ng-container>
+  </ng-container>
+</mat-card>

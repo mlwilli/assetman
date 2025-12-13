@@ -1,0 +1,71 @@
+<mat-card class="card">
+  <ng-container *ngIf="state$ | async as s">
+    <mat-progress-bar *ngIf="s.kind === 'loading'" mode="indeterminate"></mat-progress-bar>
+
+    <div class="error" *ngIf="s.kind === 'error'">
+      <strong>Could not load asset.</strong>
+      <div class="error-message">{{ s.message }}</div>
+      <div class="actions">
+        <a mat-button routerLink="/assets">Back to Assets</a>
+      </div>
+    </div>
+
+    <ng-container *ngIf="s.kind === 'ready'">
+      <div class="header">
+        <div>
+          <h2 class="title">{{ s.asset.name }}</h2>
+          <div class="sub">
+            <span class="mono">ID: {{ s.asset.id }}</span>
+          </div>
+        </div>
+
+        <div class="actions">
+          <a mat-button routerLink="/assets">Back</a>
+          <a
+            *ngIf="canManageAssets"
+            mat-raised-button
+            color="primary"
+            [routerLink]="['/assets', s.asset.id, 'edit']"
+          >
+            Edit
+          </a>
+          <button *ngIf="canManageAssets" mat-button (click)="delete(s.asset)">
+            Delete
+          </button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="row"><div class="label">Status</div><div class="value">{{ s.asset.status }}</div></div>
+        <div class="row"><div class="label">Category</div><div class="value">{{ s.asset.category || '—' }}</div></div>
+        <div class="row"><div class="label">Code</div><div class="value mono">{{ s.asset.code || '—' }}</div></div>
+        <div class="row"><div class="label">Asset Tag</div><div class="value mono">{{ s.asset.assetTag || '—' }}</div></div>
+        <div class="row"><div class="label">Serial</div><div class="value mono">{{ s.asset.serialNumber || '—' }}</div></div>
+        <div class="row"><div class="label">Manufacturer</div><div class="value">{{ s.asset.manufacturer || '—' }}</div></div>
+        <div class="row"><div class="label">Model</div><div class="value">{{ s.asset.model || '—' }}</div></div>
+
+        <div class="row"><div class="label">Location ID</div><div class="value mono">{{ s.asset.locationId || '—' }}</div></div>
+        <div class="row"><div class="label">Property ID</div><div class="value mono">{{ s.asset.propertyId || '—' }}</div></div>
+        <div class="row"><div class="label">Unit ID</div><div class="value mono">{{ s.asset.unitId || '—' }}</div></div>
+        <div class="row"><div class="label">Assigned User ID</div><div class="value mono">{{ s.asset.assignedUserId || '—' }}</div></div>
+
+        <div class="row"><div class="label">Purchase Date</div><div class="value">{{ s.asset.purchaseDate || '—' }}</div></div>
+        <div class="row"><div class="label">In Service</div><div class="value">{{ s.asset.inServiceDate || '—' }}</div></div>
+        <div class="row"><div class="label">Retired</div><div class="value">{{ s.asset.retiredDate || '—' }}</div></div>
+        <div class="row"><div class="label">Disposed</div><div class="value">{{ s.asset.disposedDate || '—' }}</div></div>
+        <div class="row"><div class="label">Warranty Expiry</div><div class="value">{{ s.asset.warrantyExpiryDate || '—' }}</div></div>
+
+        <div class="row"><div class="label">Purchase Cost</div><div class="value">{{ s.asset.purchaseCost ?? '—' }}</div></div>
+        <div class="row"><div class="label">Residual Value</div><div class="value">{{ s.asset.residualValue ?? '—' }}</div></div>
+        <div class="row"><div class="label">Depreciation Years</div><div class="value">{{ s.asset.depreciationYears ?? '—' }}</div></div>
+
+        <div class="row full">
+          <div class="label">Tags</div>
+          <div class="value">
+            {{ s.asset.tags?.join(', ') || '—' }}
+          </div>
+        </div>
+      </div>
+    </ng-container>
+  </ng-container>
+</mat-card>
