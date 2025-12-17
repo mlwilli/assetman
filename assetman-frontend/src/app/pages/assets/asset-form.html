@@ -74,10 +74,14 @@
             <input matInput formControlName="tagsCsv" placeholder="e.g. electrical, floor-2, critical" />
           </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Location ID</mat-label>
-            <input matInput formControlName="locationId" placeholder="UUID" />
-          </mat-form-field>
+          <!-- Location Picker -->
+          <div class="full location-filter">
+            <label>Location</label>
+            <app-location-picker
+              [selectedId]="form.value.locationId || null"
+              (selectedIdChange)="form.patchValue({ locationId: $event ?? '' })"
+            />
+          </div>
 
           <mat-form-field appearance="outline">
             <mat-label>Property ID</mat-label>

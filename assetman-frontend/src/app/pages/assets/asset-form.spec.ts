@@ -27,7 +27,7 @@ describe('AssetFormPageComponent', () => {
     }).compileComponents();
 
     // Ensure UI permission check passes without guessing your CurrentUserDto shape:
-    // We set roles as an array, which our normalizeRoles supports.
+    // We set roles as an array, which normalizeRoles supports.
     const auth = TestBed.inject(AuthService);
     (auth as any).userSubject?.next?.({ roles: ['OWNER'] }); // if private in your build, this is harmless no-op
 
@@ -39,10 +39,33 @@ describe('AssetFormPageComponent', () => {
     httpMock.verify();
   });
 
-  it('creates (create mode) without making an HTTP call until submit', () => {
+  it('creates without calling /api/assets until submit (location tree may load)', () => {
     fixture.detectChanges();
-    // No calls should occur on create mode load
-    expect(() => httpMock.expectOne(() => true)).toThrow();
+
+    // LocationPicker loads the tree once on render.
+    const treeReq = httpMock.expectOne(
+      (r) => r.method === 'GET' && r.url.includes('/api/locations/tree'),
+    );
+
+    treeReq.flush([
+      {
+        id: 'loc-1',
+        name: 'HQ',
+        type: 'SITE',
+        code: null,
+        parentId: null,
+        active: true,
+        sortOrder: null,
+        children: [],
+      },
+    ]);
+
+    // Ensure no asset calls on create-mode load.
+    const assetReqs = httpMock.match(
+      (r) => r.method === 'GET' && r.url.includes('/api/assets'),
+    );
+    expect(assetReqs.length).toBe(0);
+
     expect(fixture.componentInstance).toBeTruthy();
   });
 });

@@ -14,6 +14,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { AssetApi } from '../../core/assets/asset.api';
 import { AssetDto, AssetUpsertRequest } from '../../core/assets/asset.models';
 import { AuthService } from '../../core/auth/auth.service';
+import { LocationPickerComponent } from '../../shared/location-picker/location-picker';
 
 type ViewState =
   | { kind: 'loading'; mode: 'create' | 'edit'; id?: string }
@@ -32,6 +33,7 @@ type ViewState =
     MatInputModule,
     MatButtonModule,
     MatProgressBarModule,
+    LocationPickerComponent,
   ],
   templateUrl: './asset-form.html',
   styleUrl: './asset-form.scss',
@@ -86,7 +88,11 @@ export class AssetFormPageComponent {
       const mode: 'create' | 'edit' = id ? 'edit' : 'create';
 
       if (!this.canManageAssets) {
-        return of({ kind: 'error', mode, message: 'You do not have permission to manage assets.' } as ViewState);
+        return of({
+          kind: 'error',
+          mode,
+          message: 'You do not have permission to manage assets.',
+        } as ViewState);
       }
 
       if (!id) {
@@ -94,6 +100,7 @@ export class AssetFormPageComponent {
           name: '',
           status: '',
           tagsCsv: '',
+          locationId: '',
         });
         return of({ kind: 'ready', mode } as ViewState);
       }
@@ -122,7 +129,7 @@ export class AssetFormPageComponent {
         : this.api.updateAsset(existing!.id, req);
 
     obs.subscribe({
-      next: async (saved) => {
+      next: async saved => {
         await this.router.navigateByUrl(`/assets/${saved.id}`);
       },
       error: () => {
@@ -142,7 +149,7 @@ export class AssetFormPageComponent {
       manufacturer: a.manufacturer ?? '',
       model: a.model ?? '',
       externalRef: a.externalRef ?? '',
-      tagsCsv: (a.tags?.length ? a.tags.join(', ') : ''),
+      tagsCsv: a.tags?.length ? a.tags.join(', ') : '',
 
       locationId: a.locationId ?? '',
       propertyId: a.propertyId ?? '',
@@ -225,7 +232,10 @@ export class AssetFormPageComponent {
 
   private toErrorState(err: unknown, mode: 'create' | 'edit'): ViewState {
     if (err instanceof HttpErrorResponse) {
-      const msg = (err.error as any)?.message || err.message || `Request failed (${err.status})`;
+      const msg =
+        (err.error as any)?.message ||
+        err.message ||
+        `Request failed (${err.status})`;
       return { kind: 'error', mode, message: msg };
     }
     return { kind: 'error', mode, message: 'Unexpected error while loading asset.' };
