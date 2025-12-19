@@ -31,7 +31,12 @@
 
           <mat-form-field appearance="outline">
             <mat-label>Status</mat-label>
-            <input matInput formControlName="status" placeholder="(free text)" />
+            <mat-select formControlName="status">
+              <mat-option value="" disabled>Select status</mat-option>
+              <mat-option *ngFor="let o of statusOptions" [value]="o.value">
+                {{ o.label }}
+              </mat-option>
+            </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
@@ -78,49 +83,64 @@
           <div class="full location-filter">
             <label>Location</label>
             <app-location-picker
-              [selectedId]="form.value.locationId || null"
-              (selectedIdChange)="form.patchValue({ locationId: $event ?? '' })"
+              [selectedId]="selectedLocationId"
+              (selectedIdChange)="onLocationSelected($event)"
             />
           </div>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Property ID</mat-label>
-            <input matInput formControlName="propertyId" placeholder="UUID" />
-          </mat-form-field>
+          <app-property-picker
+            class="full"
+            [selectedId]="form.value.propertyId || null"
+            (selectedIdChange)="onPropertySelected($event)"
+          ></app-property-picker>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Unit ID</mat-label>
-            <input matInput formControlName="unitId" placeholder="UUID" />
-          </mat-form-field>
+          <app-unit-picker
+            class="full"
+            [propertyId]="selectedPropertyId"
+            [selectedId]="form.value.unitId || null"
+            (selectedIdChange)="form.patchValue({ unitId: $event ?? '' })"
+          ></app-unit-picker>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Assigned User ID</mat-label>
-            <input matInput formControlName="assignedUserId" placeholder="UUID" />
-          </mat-form-field>
+          <app-user-picker
+            class="full"
+            [selectedId]="form.value.assignedUserId || null"
+            (selectedIdChange)="form.patchValue({ assignedUserId: $event ?? '' })"
+          ></app-user-picker>
+
 
           <mat-form-field appearance="outline">
             <mat-label>Purchase Date</mat-label>
-            <input matInput formControlName="purchaseDate" placeholder="YYYY-MM-DD" />
+            <input matInput [matDatepicker]="purchasePicker" formControlName="purchaseDate" />
+            <mat-datepicker-toggle matIconSuffix [for]="purchasePicker"></mat-datepicker-toggle>
+            <mat-datepicker #purchasePicker></mat-datepicker>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>In Service Date</mat-label>
-            <input matInput formControlName="inServiceDate" placeholder="YYYY-MM-DD" />
+            <input matInput [matDatepicker]="inServicePicker" formControlName="inServiceDate" />
+            <mat-datepicker-toggle matIconSuffix [for]="inServicePicker"></mat-datepicker-toggle>
+            <mat-datepicker #inServicePicker></mat-datepicker>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Retired Date</mat-label>
-            <input matInput formControlName="retiredDate" placeholder="YYYY-MM-DD" />
+            <input matInput [matDatepicker]="retiredPicker" formControlName="retiredDate" />
+            <mat-datepicker-toggle matIconSuffix [for]="retiredPicker"></mat-datepicker-toggle>
+            <mat-datepicker #retiredPicker></mat-datepicker>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Disposed Date</mat-label>
-            <input matInput formControlName="disposedDate" placeholder="YYYY-MM-DD" />
+            <input matInput [matDatepicker]="disposedPicker" formControlName="disposedDate" />
+            <mat-datepicker-toggle matIconSuffix [for]="disposedPicker"></mat-datepicker-toggle>
+            <mat-datepicker #disposedPicker></mat-datepicker>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Warranty Expiry</mat-label>
-            <input matInput formControlName="warrantyExpiryDate" placeholder="YYYY-MM-DD" />
+            <input matInput [matDatepicker]="warrantyPicker" formControlName="warrantyExpiryDate" />
+            <mat-datepicker-toggle matIconSuffix [for]="warrantyPicker"></mat-datepicker-toggle>
+            <mat-datepicker #warrantyPicker></mat-datepicker>
           </mat-form-field>
 
           <mat-form-field appearance="outline">

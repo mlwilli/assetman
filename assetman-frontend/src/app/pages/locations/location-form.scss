@@ -1,0 +1,36 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+
+.title {
+  margin: 0;
+}
+
+.error {
+  padding: 16px;
+  color: #b00020;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.picker {
+  padding: 8px 0;
+}
+
+.picker-label {
+  font-size: 12px;
+  opacity: 0.75;
+  margin-bottom: 6px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}

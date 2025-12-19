@@ -1,6 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import {
+  Router,
+  RouterLink,
+  RouterLinkActive,
+  RouterOutlet,
+} from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
@@ -49,6 +54,7 @@ export class AppShellComponent {
   readonly navItems: NavItem[] = [
     { label: 'Dashboard', icon: 'dashboard', link: '/dashboard', exact: true },
     { label: 'Assets', icon: 'inventory_2', link: '/assets' },
+    { label: 'Locations', icon: 'account_tree', link: '/locations' },
   ];
 
   readonly userLabel = computed(() => {

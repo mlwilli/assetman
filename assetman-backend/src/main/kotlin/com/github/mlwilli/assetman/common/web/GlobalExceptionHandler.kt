@@ -17,6 +17,7 @@ import org.springframework.security.core.AuthenticationException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.HttpRequestMethodNotSupportedException
 
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice
@@ -175,4 +176,20 @@ class GlobalExceptionHandler {
         // TODO: add logging here
         return ResponseEntity(body, HttpHeaders(), status)
     }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException::class)
+    fun handleMethodNotSupported(
+        ex: HttpRequestMethodNotSupportedException,
+        request: HttpServletRequest
+    ): ResponseEntity<ApiErrorResponse> {
+        val status = HttpStatus.METHOD_NOT_ALLOWED
+        val body = ApiErrorResponse(
+            status = status.value(),
+            error = status.reasonPhrase,
+            message = "Method not allowed",
+            path = request.requestURI
+        )
+        return ResponseEntity(body, HttpHeaders(), status)
+    }
+
 }

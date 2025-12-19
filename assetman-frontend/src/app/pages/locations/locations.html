@@ -1,0 +1,95 @@
+<ng-container *ngIf="(state$ | async) as s">
+  <mat-card>
+    <mat-progress-bar *ngIf="s.kind === 'loading'" mode="indeterminate"></mat-progress-bar>
+
+    <div class="header">
+      <div>
+        <h2 class="title">Locations</h2>
+        <div class="subtitle">Browse the hierarchy or search as a flat list</div>
+      </div>
+
+      <div class="actions">
+        <mat-button-toggle-group
+          [value]="s.view"
+          (change)="setViewMode($event.value)"
+          aria-label="Locations view mode"
+        >
+          <mat-button-toggle value="tree">Tree</mat-button-toggle>
+          <mat-button-toggle value="list">List</mat-button-toggle>
+        </mat-button-toggle-group>
+
+        <a
+          *ngIf="canManageLocations"
+          mat-raised-button
+          color="primary"
+          routerLink="/locations/new"
+        >
+          New Location
+        </a>
+      </div>
+    </div>
+
+    <div class="filters">
+      <mat-form-field appearance="outline" class="f-search">
+        <mat-label>Search</mat-label>
+        <input matInput [formControl]="filters.controls.search" placeholder="Name contains..." />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="f-type">
+        <mat-label>Type</mat-label>
+        <mat-select [formControl]="filters.controls.type">
+          <mat-option value="">All</mat-option>
+          <mat-option *ngFor="let t of types" [value]="t">{{ t }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="f-parent">
+        <mat-label>Parent Id (optional)</mat-label>
+        <input matInput [formControl]="filters.controls.parentId" placeholder="UUID" />
+      </mat-form-field>
+
+      <mat-slide-toggle class="f-active" [formControl]="filters.controls.activeOnly">
+        Active only
+      </mat-slide-toggle>
+
+      <button mat-button type="button" (click)="clearFilters()">Clear</button>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="error" *ngIf="s.kind === 'error'">
+      {{ s.message }}
+    </div>
+
+    <div *ngIf="s.kind === 'ready'">
+      <!-- TREE VIEW -->
+      <div *ngIf="s.view === 'tree'">
+        <div class="empty" *ngIf="!s.tree.length">No locations yet.</div>
+
+        <div *ngIf="s.tree.length">
+          <app-location-tree [nodes]="s.tree" mode="navigate"></app-location-tree>
+        </div>
+      </div>
+
+      <!-- LIST VIEW -->
+      <div *ngIf="s.view === 'list'">
+        <div class="empty" *ngIf="!s.list.length">No matching locations.</div>
+
+        <div class="list" *ngIf="s.list.length">
+          <a
+            class="list-row"
+            *ngFor="let loc of s.list; trackBy: trackById"
+            [routerLink]="['/locations', loc.id]"
+          >
+            <div class="name">{{ loc.name }}</div>
+            <div class="meta">
+              <span class="pill">{{ loc.type }}</span>
+              <span class="muted" *ngIf="loc.code">{{ loc.code }}</span>
+              <span class="muted" *ngIf="!loc.active">Inactive</span>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </mat-card>
+</ng-container>

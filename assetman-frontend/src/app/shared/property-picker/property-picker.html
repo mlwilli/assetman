@@ -1,0 +1,25 @@
+<mat-form-field appearance="outline" class="full">
+  <mat-label>Property</mat-label>
+
+  <input
+    type="text"
+    matInput
+    [formControl]="ctrl"
+    [matAutocomplete]="auto"
+    placeholder="Search properties..."
+  />
+
+  <mat-autocomplete
+    #auto="matAutocomplete"
+    [displayWith]="displayFn"
+    (optionSelected)="pick($event.option.value)"
+  >
+    <mat-option [value]="null">- Clear -</mat-option>
+
+    <mat-option *ngFor="let p of (options$ | async) ?? []" [value]="p">
+      {{ p.name }} <span *ngIf="p.code">({{ p.code }})</span>
+    </mat-option>
+  </mat-autocomplete>
+</mat-form-field>
+
+<mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>

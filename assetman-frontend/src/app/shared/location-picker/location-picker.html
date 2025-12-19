@@ -2,24 +2,12 @@
   <button mat-button type="button" (click)="select(null)">Clear</button>
 
   <ng-container *ngIf="tree$ | async as nodes; else loading">
-    <ul class="tree">
-      <li *ngFor="let n of nodes; trackBy: trackById">
-        <button
-          type="button"
-          mat-button
-          [class.active]="n.id === selectedId"
-          (click)="select(n.id)"
-        >
-          {{ n.name }}
-        </button>
-
-        <app-location-children
-          [nodes]="n.children"
-          [selectedId]="selectedId"
-          (select)="select($event)"
-        ></app-location-children>
-      </li>
-    </ul>
+    <app-location-tree
+      [nodes]="nodes"
+      mode="select"
+      [selectedId]="selectedId"
+      (selectedIdChange)="select($event)"
+    ></app-location-tree>
   </ng-container>
 
   <ng-template #loading>

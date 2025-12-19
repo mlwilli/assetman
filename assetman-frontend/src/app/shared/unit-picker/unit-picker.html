@@ -1,0 +1,20 @@
+<mat-form-field appearance="outline" class="full">
+  <mat-label>Unit</mat-label>
+
+  <input
+    type="text"
+    matInput
+    [formControl]="ctrl"
+    [matAutocomplete]="auto"
+    placeholder="{{ propertyId ? 'Search units...' : 'Select a property first' }}"
+  />
+
+  <mat-autocomplete #auto="matAutocomplete" [displayWith]="displayFn">
+    <mat-option (click)="clear()">- Clear -</mat-option>
+    <mat-option *ngFor="let u of options" (click)="pick(u)">
+      {{ u.name }} <span *ngIf="u.floor"> (Floor {{ u.floor }})</span>
+    </mat-option>
+  </mat-autocomplete>
+</mat-form-field>
+
+<mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>

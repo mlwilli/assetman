@@ -1,0 +1,69 @@
+<ng-container *ngIf="(state$ | async) as s">
+  <mat-card>
+    <mat-progress-bar *ngIf="s.kind === 'loading'" mode="indeterminate"></mat-progress-bar>
+
+    <div class="header">
+      <a mat-button routerLink="/locations">Back</a>
+      <h2 class="title">
+        {{ s.kind === 'ready' ? (s.mode === 'create' ? 'New Location' : 'Edit Location') : 'Location' }}
+      </h2>
+    </div>
+
+    <div class="error" *ngIf="s.kind === 'error'">
+      {{ s.message }}
+    </div>
+
+    <form *ngIf="s.kind === 'ready'" class="form" (ngSubmit)="submit(s.mode, s.location)">
+      <mat-form-field appearance="outline">
+        <mat-label>Name</mat-label>
+        <input matInput [formControl]="form.controls.name" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Type</mat-label>
+        <mat-select [formControl]="form.controls.type">
+          <mat-option *ngFor="let t of types" [value]="t">{{ t }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Code</mat-label>
+        <input matInput [formControl]="form.controls.code" />
+      </mat-form-field>
+
+      <div class="picker">
+        <div class="picker-label">Parent Location</div>
+        <app-location-picker
+          [selectedId]="selectedParentId"
+          (selectedIdChange)="onParentSelected($event)"
+        ></app-location-picker>
+      </div>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Sort Order</mat-label>
+        <input matInput type="number" [formControl]="form.controls.sortOrder" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Description</mat-label>
+        <input matInput [formControl]="form.controls.description" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>External Ref</mat-label>
+        <input matInput [formControl]="form.controls.externalRef" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Custom Fields (JSON)</mat-label>
+        <textarea matInput rows="5" [formControl]="form.controls.customFieldsJson"></textarea>
+      </mat-form-field>
+
+      <div class="actions">
+        <button mat-raised-button color="primary" type="submit">
+          Save
+        </button>
+      </div>
+    </form>
+  </mat-card>
+</ng-container>

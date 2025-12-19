@@ -137,7 +137,7 @@ class AuthService(
         val principal = requireCurrentUser()
 
         val user = userRepository.findById(principal.userId)
-            .orElseThrow { IllegalStateException("User not found") }
+            .orElseThrow { org.springframework.security.authentication.BadCredentialsException("Invalid credentials") }
 
         // Safety check: should always be true, but we assert to prevent cross-tenant weirdness.
         if (user.tenantId != principal.tenantId) {

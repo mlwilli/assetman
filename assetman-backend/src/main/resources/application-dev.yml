@@ -2,6 +2,9 @@ spring:
   graphql:
     graphiql:
       enabled: true
+  output:
+    ansi:
+      enabled: ALWAYS
 
 app:
   cors:

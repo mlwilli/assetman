@@ -1,0 +1,25 @@
+<mat-form-field appearance="outline" class="full">
+  <mat-label>Assigned User</mat-label>
+
+  <input
+    type="text"
+    matInput
+    [formControl]="ctrl"
+    [matAutocomplete]="auto"
+    placeholder="Search users..."
+  />
+
+  <mat-autocomplete
+    #auto="matAutocomplete"
+    [displayWith]="displayFn"
+    (optionSelected)="pick($event.option.value)"
+  >
+    <mat-option [value]="null">- Clear -</mat-option>
+
+    <mat-option *ngFor="let u of (options$ | async) ?? []" [value]="u">
+      {{ userLabel(u) }} - {{ u.email }}
+    </mat-option>
+  </mat-autocomplete>
+</mat-form-field>
+
+<mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>

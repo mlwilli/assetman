@@ -5,12 +5,12 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 
 import { LocationApi } from '../../core/locations/location.api';
 import { LocationTreeNodeDto } from '../../core/locations/location.models';
-import {LocationChildrenComponent} from './location-children';
+import { LocationTreeComponent } from '../location-tree/location-tree';
 
 @Component({
   selector: 'app-location-picker',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatProgressBarModule, LocationChildrenComponent],
+  imports: [CommonModule, MatButtonModule, MatProgressBarModule, LocationTreeComponent],
   templateUrl: './location-picker.html',
   styleUrls: ['./location-picker.scss'],
 })

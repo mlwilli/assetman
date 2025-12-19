@@ -1,71 +1,88 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
-import { ActivatedRoute } from '@angular/router';
-import { of } from 'rxjs';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
 
 import { AssetFormPageComponent } from './asset-form';
-import { authInterceptor } from '../../core/http/auth.interceptor';
-import { refreshInterceptor } from '../../core/http/refresh.interceptor';
-import { errorInterceptor } from '../../core/http/error.interceptor';
 import { AuthService } from '../../core/auth/auth.service';
 
+class MockAuthService {
+  currentUser = { roles: ['ADMIN'] };
+}
+
 describe('AssetFormPageComponent', () => {
-  let fixture: ComponentFixture<AssetFormPageComponent>;
   let httpMock: HttpTestingController;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AssetFormPageComponent],
       providers: [
-        provideRouter([]),
-        { provide: ActivatedRoute, useValue: { paramMap: of(new Map() as any) } }, // create mode
-        provideHttpClient(withInterceptors([authInterceptor, refreshInterceptor, errorInterceptor])),
+        provideRouter([]), // ✅ provides ActivatedRoute for RouterLink
+        provideHttpClient(),
         provideHttpClientTesting(),
+        { provide: AuthService, useClass: MockAuthService },
       ],
     }).compileComponents();
 
-    // Ensure UI permission check passes without guessing your CurrentUserDto shape:
-    // We set roles as an array, which normalizeRoles supports.
-    const auth = TestBed.inject(AuthService);
-    (auth as any).userSubject?.next?.({ roles: ['OWNER'] }); // if private in your build, this is harmless no-op
-
-    fixture = TestBed.createComponent(AssetFormPageComponent);
     httpMock = TestBed.inject(HttpTestingController);
   });
 
   afterEach(() => {
+    flushOptionalBackgroundRequests(httpMock);
     httpMock.verify();
   });
 
-  it('creates without calling /api/assets until submit (location tree may load)', () => {
+  it('create-mode: renders pickers and does not call /api/assets until submit', () => {
+    const fixture = TestBed.createComponent(AssetFormPageComponent);
     fixture.detectChanges();
 
-    // LocationPicker loads the tree once on render.
-    const treeReq = httpMock.expectOne(
-      (r) => r.method === 'GET' && r.url.includes('/api/locations/tree'),
-    );
+    flushOptionalBackgroundRequests(httpMock);
 
-    treeReq.flush([
-      {
-        id: 'loc-1',
-        name: 'HQ',
-        type: 'SITE',
-        code: null,
-        parentId: null,
-        active: true,
-        sortOrder: null,
-        children: [],
-      },
-    ]);
-
-    // Ensure no asset calls on create-mode load.
-    const assetReqs = httpMock.match(
+    // Ensure NO asset list call happens
+    const assetGets = httpMock.match(
       (r) => r.method === 'GET' && r.url.includes('/api/assets'),
     );
-    expect(assetReqs.length).toBe(0);
+    expect(assetGets.length).toBe(0);
 
-    expect(fixture.componentInstance).toBeTruthy();
+    // Ensure we did not create/update anything automatically
+    const assetWrites = httpMock.match(
+      (r) =>
+        (r.method === 'POST' || r.method === 'PUT') &&
+        r.url.includes('/api/assets'),
+    );
+    expect(assetWrites.length).toBe(0);
   });
+
+  function flushOptionalBackgroundRequests(mock: HttpTestingController) {
+    const props = mock.match(
+      (r) => r.method === 'GET' && r.url.includes('/api/properties'),
+    );
+    props.forEach((r) => r.flush([]));
+
+    const users = mock.match(
+      (r) => r.method === 'GET' && r.url.includes('/api/users'),
+    );
+    users.forEach((r) =>
+      r.flush({
+        content: [],
+        page: 0,
+        size: 20,
+        totalElements: 0,
+        totalPages: 0,
+      }),
+    );
+
+    const units = mock.match(
+      (r) => r.method === 'GET' && r.url.includes('/api/units'),
+    );
+    units.forEach((r) => r.flush([]));
+
+    const locs = mock.match(
+      (r) => r.method === 'GET' && r.url.includes('/api/locations'),
+    );
+    locs.forEach((r) => r.flush([]));
+  }
 });

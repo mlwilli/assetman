@@ -1,0 +1,73 @@
+.tree {
+  padding: 8px 0;
+}
+
+.row, .mat-tree-node {
+  display: flex;
+  align-items: center;
+}
+
+.toggle {
+  margin-right: 4px;
+}
+
+.node {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  width: 100%;
+  text-align: left;
+}
+
+.node:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.node.select {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.node.select.selected {
+  font-weight: 600;
+  outline: 2px solid rgba(0, 0, 0, 0.12);
+}
+
+.name {
+  font-weight: 600;
+}
+
+.meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  opacity: 0.9;
+  flex-wrap: wrap;
+}
+
+.pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  font-size: 12px;
+}
+
+.muted {
+  opacity: 0.75;
+  font-size: 12px;
+}
+
+.children.hidden {
+  display: none;
+}
+
+.select-actions {
+  padding: 8px 8px 0;
+  opacity: 0.9;
+}
