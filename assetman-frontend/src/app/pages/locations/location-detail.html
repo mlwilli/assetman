@@ -24,25 +24,25 @@
 
       <div class="kv">
         <div class="k">Type</div><div class="v">{{ s.location.type }}</div>
-        <div class="k">Code</div><div class="v">{{ s.location.code || '—' }}</div>
+        <div class="k">Code</div><div class="v">{{ s.location.code || '-' }}</div>
         <div class="k">Active</div><div class="v">{{ s.location.active }}</div>
-        <div class="k">Parent</div><div class="v">{{ s.location.parentId || '—' }}</div>
-        <div class="k">Path</div><div class="v">{{ s.location.path || '—' }}</div>
+        <div class="k">Parent</div><div class="v">{{ s.location.parentId || '-' }}</div>
+        <div class="k">Path</div><div class="v">{{ s.location.path || '-' }}</div>
       </div>
 
       <div class="section">
         <div class="label">Description</div>
-        <div class="value">{{ s.location.description || '—' }}</div>
+        <div class="value">{{ s.location.description || '-' }}</div>
       </div>
 
       <div class="section">
         <div class="label">External Ref</div>
-        <div class="value">{{ s.location.externalRef || '—' }}</div>
+        <div class="value">{{ s.location.externalRef || '-' }}</div>
       </div>
 
       <div class="section">
         <div class="label">Custom Fields (JSON)</div>
-        <pre class="json">{{ s.location.customFieldsJson || '—' }}</pre>
+        <pre class="json">{{ s.location.customFieldsJson || '-' }}</pre>
       </div>
     </div>
   </mat-card>

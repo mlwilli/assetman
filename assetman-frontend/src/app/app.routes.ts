@@ -63,7 +63,7 @@ export const routes: Routes = [
           import('./pages/locations/locations').then(m => m.LocationsPageComponent),
       },
 
-      // Locations (create/edit: restricted) — define BEFORE :id route
+      // Locations (create/edit: restricted) - define BEFORE :id route
       {
         path: 'locations/new',
         canMatch: [roleGuard([...MANAGE_ROLES])],
