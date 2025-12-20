@@ -2,7 +2,12 @@ import { Injectable } from '@angular/core';
 import { HttpBackend, HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment.development';
-import { AuthDto, CurrentUserDto, LoginRequest, RefreshTokenRequest } from './auth.models';
+import {
+  AuthDto,
+  CurrentUserDto,
+  LoginRequest,
+  RefreshTokenRequest,
+} from './auth.models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthApi {
@@ -23,11 +28,16 @@ export class AuthApi {
    */
   refresh(req: RefreshTokenRequest): Observable<AuthDto> {
     const headers = new HttpHeaders({ 'X-Skip-Auth': 'true' });
-    return this.httpBypass.post<AuthDto>(`${this.baseUrl}/api/auth/refresh`, req, { headers });
+    return this.httpBypass.post<AuthDto>(`${this.baseUrl}/api/auth/refresh`, req, {
+      headers,
+    });
   }
 
-  logout(): Observable<void> {
-    return this.http.post<void>(`${this.baseUrl}/api/auth/logout`, {});
+  /**
+   * Backend requires a RefreshTokenRequest body so it can revoke the refresh token.
+   */
+  logout(req: RefreshTokenRequest): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/api/auth/logout`, req);
   }
 
   me(): Observable<CurrentUserDto> {

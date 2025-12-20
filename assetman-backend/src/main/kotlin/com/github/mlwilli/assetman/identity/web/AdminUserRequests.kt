@@ -10,7 +10,7 @@ data class CreateUserRequest(
     @field:Email(message = "Email must be a valid email address")
     val email: String,
 
-    // Optional, so no @NotBlank — but we can still bound the length if present.
+    // Optional, so no @NotBlank - but we can still bound the length if present.
     @field:Size(max = 255, message = "Display name must be at most 255 characters")
     val displayName: String?,
 

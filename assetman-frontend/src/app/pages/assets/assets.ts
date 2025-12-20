@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { LocationPickerComponent } from '../../shared/location-picker/location-picker';
 
 import {
   BehaviorSubject,
@@ -22,12 +21,23 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
 
 import { RouterLink } from '@angular/router';
 
 import { AssetApi } from '../../core/assets/asset.api';
-import { AssetDto, PageResponse } from '../../core/assets/asset.models';
+import {
+  AssetDto,
+  AssetStatus,
+  ASSET_STATUS_OPTIONS,
+  PageResponse,
+} from '../../core/assets/asset.models';
 import { AuthService } from '../../core/auth/auth.service';
+
+import { LocationPickerComponent } from '../../shared/location-picker/location-picker';
+import { PropertyPickerComponent } from '../../shared/property-picker/property-picker';
+import { UnitPickerComponent } from '../../shared/unit-picker/unit-picker';
+import { UserPickerComponent } from '../../shared/user-picker/user-picker';
 
 type ViewState =
   | { kind: 'loading' }
@@ -44,10 +54,13 @@ type ViewState =
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     MatButtonModule,
     MatProgressBarModule,
     LocationPickerComponent,
-
+    PropertyPickerComponent,
+    UnitPickerComponent,
+    UserPickerComponent,
   ],
   templateUrl: './assets.html',
   styleUrl: './assets.scss',
@@ -57,10 +70,13 @@ export class AssetsPageComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
 
+  readonly statusOptions = ASSET_STATUS_OPTIONS;
+
   readonly form = this.fb.group({
     search: [''],
-    status: [''],
+    status: ['' as '' | AssetStatus],
     category: [''],
+
     locationId: [''],
     propertyId: [''],
     unitId: [''],
@@ -73,7 +89,6 @@ export class AssetsPageComponent {
   readonly page$ = this.pageSubject.asObservable();
   readonly size$ = this.sizeSubject.asObservable();
 
-  // UI-level permission gating (route-level guard can be added once role.guard.ts contract is confirmed)
   get canManageAssets(): boolean {
     const roles = this.normalizeRoles((this.auth.currentUser as any)?.roles);
     return this.hasAnyRole(roles, ['OWNER', 'ADMIN', 'MANAGER']);
@@ -83,7 +98,7 @@ export class AssetsPageComponent {
     this.form.valueChanges.pipe(
       startWith(this.form.value),
       debounceTime(200),
-      map(v => ({
+      map((v) => ({
         search: (v.search ?? '').trim(),
         status: (v.status ?? '').trim(),
         category: (v.category ?? '').trim(),
@@ -104,7 +119,7 @@ export class AssetsPageComponent {
         size,
         filters: {
           search: filters.search || null,
-          status: filters.status || null,
+          status: (filters.status || null) as AssetStatus | null,
           category: filters.category || null,
           locationId: filters.locationId || null,
           propertyId: filters.propertyId || null,
@@ -131,9 +146,59 @@ export class AssetsPageComponent {
     this.pageSubject.next(current.page - 1);
   }
 
+  // -------- Picker adapters (keep templates clean) --------
+
+  get selectedLocationId(): string | null {
+    const v = (this.form.get('locationId')?.value ?? '').toString().trim();
+    return v ? v : null;
+  }
+  onLocationSelected(id: string | null) {
+    this.form.patchValue({ locationId: id ?? '' });
+  }
+
+  get selectedPropertyId(): string | null {
+    const v = (this.form.get('propertyId')?.value ?? '').toString().trim();
+    return v ? v : null;
+  }
+  onPropertySelected(id: string | null) {
+    const current = (this.form.get('propertyId')?.value ?? '').toString().trim();
+    const next = (id ?? '').trim();
+
+    // If property changes, clear unit to prevent inconsistent association
+    if (current && next && current !== next) {
+      this.form.patchValue({ unitId: '' });
+    }
+    if (!next) {
+      this.form.patchValue({ unitId: '' });
+    }
+
+    this.form.patchValue({ propertyId: next });
+  }
+
+  get selectedUnitId(): string | null {
+    const v = (this.form.get('unitId')?.value ?? '').toString().trim();
+    return v ? v : null;
+  }
+  onUnitSelected(id: string | null) {
+    this.form.patchValue({ unitId: id ?? '' });
+  }
+
+  get selectedAssignedUserId(): string | null {
+    const v = (this.form.get('assignedUserId')?.value ?? '').toString().trim();
+    return v ? v : null;
+  }
+  onAssignedUserSelected(id: string | null) {
+    this.form.patchValue({ assignedUserId: id ?? '' });
+  }
+
+  // -------- Error + RBAC helpers --------
+
   private toErrorState(err: unknown): ViewState {
     if (err instanceof HttpErrorResponse) {
-      const msg = (err.error as any)?.message || err.message || `Request failed (${err.status})`;
+      const msg =
+        (err.error as any)?.message ||
+        err.message ||
+        `Request failed (${err.status})`;
       return { kind: 'error', message: msg };
     }
     return { kind: 'error', message: 'Unexpected error while loading assets.' };
@@ -148,6 +213,6 @@ export class AssetsPageComponent {
 
   private hasAnyRole(userRoles: string[], required: string[]): boolean {
     const set = new Set(userRoles);
-    return required.some(r => set.has(r));
+    return required.some((r) => set.has(r));
   }
 }

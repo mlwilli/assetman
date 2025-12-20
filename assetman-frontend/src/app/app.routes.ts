@@ -2,43 +2,92 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
 import { roleGuard } from './core/auth/role.guard';
 
-import { AppShellComponent } from './layout/app-shell/app-shell';
-import { LoginPageComponent } from './pages/login/login';
-import { DashboardPageComponent } from './pages/dashboard/dashboard';
-import { ForbiddenPageComponent } from './pages/forbidden/forbidden';
-
-import { AssetsPageComponent } from './pages/assets/assets';
-import { AssetDetailPageComponent } from './pages/assets/asset-detail';
-import { AssetFormPageComponent } from './pages/assets/asset-form';
-
-const ASSET_MANAGE_ROLES = ['OWNER', 'ADMIN', 'MANAGER'] as const;
+const MANAGE_ROLES = ['OWNER', 'ADMIN', 'MANAGER'] as const;
 
 export const routes: Routes = [
-  { path: 'login', component: LoginPageComponent },
-  { path: 'forbidden', component: ForbiddenPageComponent },
+  {
+    path: 'login',
+    loadComponent: () =>
+      import('./pages/login/login').then(m => m.LoginPageComponent),
+  },
+  {
+    path: 'forbidden',
+    loadComponent: () =>
+      import('./pages/forbidden/forbidden').then(m => m.ForbiddenPageComponent),
+  },
 
   {
     path: '',
-    component: AppShellComponent,
+    loadComponent: () =>
+      import('./layout/app-shell/app-shell').then(m => m.AppShellComponent),
     canActivate: [authGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
-      { path: 'dashboard', component: DashboardPageComponent },
 
-      // Assets (list/detail: any authenticated role allowed by backend)
-      { path: 'assets', component: AssetsPageComponent },
-      { path: 'assets/:id', component: AssetDetailPageComponent },
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./pages/dashboard/dashboard').then(m => m.DashboardPageComponent),
+      },
+
+      // Assets (list/detail)
+      {
+        path: 'assets',
+        loadComponent: () =>
+          import('./pages/assets/assets').then(m => m.AssetsPageComponent),
+      },
+      {
+        path: 'assets/:id',
+        loadComponent: () =>
+          import('./pages/assets/asset-detail').then(m => m.AssetDetailPageComponent),
+      },
 
       // Assets (create/edit: restricted)
       {
         path: 'assets/new',
-        component: AssetFormPageComponent,
-        canMatch: [roleGuard([...ASSET_MANAGE_ROLES])],
+        canMatch: [roleGuard([...MANAGE_ROLES])],
+        loadComponent: () =>
+          import('./pages/assets/asset-form').then(m => m.AssetFormPageComponent),
       },
       {
         path: 'assets/:id/edit',
-        component: AssetFormPageComponent,
-        canMatch: [roleGuard([...ASSET_MANAGE_ROLES])],
+        canMatch: [roleGuard([...MANAGE_ROLES])],
+        loadComponent: () =>
+          import('./pages/assets/asset-form').then(m => m.AssetFormPageComponent),
+      },
+
+      // Locations (list)
+      {
+        path: 'locations',
+        loadComponent: () =>
+          import('./pages/locations/locations').then(m => m.LocationsPageComponent),
+      },
+
+      // Locations (create/edit: restricted) - define BEFORE :id route
+      {
+        path: 'locations/new',
+        canMatch: [roleGuard([...MANAGE_ROLES])],
+        loadComponent: () =>
+          import('./pages/locations/location-form').then(
+            m => m.LocationFormPageComponent,
+          ),
+      },
+      {
+        path: 'locations/:id/edit',
+        canMatch: [roleGuard([...MANAGE_ROLES])],
+        loadComponent: () =>
+          import('./pages/locations/location-form').then(
+            m => m.LocationFormPageComponent,
+          ),
+      },
+
+      // Locations (detail)
+      {
+        path: 'locations/:id',
+        loadComponent: () =>
+          import('./pages/locations/location-detail').then(
+            m => m.LocationDetailPageComponent,
+          ),
       },
     ],
   },

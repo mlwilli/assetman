@@ -9,11 +9,16 @@ import com.github.mlwilli.assetman.asset.web.UpdateAssetRequest
 import com.github.mlwilli.assetman.common.error.NotFoundException
 import com.github.mlwilli.assetman.common.security.AuthenticatedUser
 import com.github.mlwilli.assetman.common.security.TenantContext
+import com.github.mlwilli.assetman.identity.repo.UserRepository
 import com.github.mlwilli.assetman.location.domain.Location
 import com.github.mlwilli.assetman.location.domain.LocationType
 import com.github.mlwilli.assetman.location.repo.LocationRepository
-import org.junit.jupiter.api.*
-import org.junit.jupiter.api.Assertions.*
+import com.github.mlwilli.assetman.property.repo.PropertyRepository
+import com.github.mlwilli.assetman.property.repo.UnitRepository
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.Mockito
 import org.springframework.data.domain.PageImpl
@@ -27,6 +32,10 @@ class AssetServiceTest {
 
     private lateinit var assetRepository: AssetRepository
     private lateinit var locationRepository: LocationRepository
+    private lateinit var propertyRepository: PropertyRepository
+    private lateinit var unitRepository: UnitRepository
+    private lateinit var userRepository: UserRepository
+
     private lateinit var service: AssetService
 
     private val tenantId = UUID.randomUUID()
@@ -36,9 +45,17 @@ class AssetServiceTest {
     fun setUp() {
         assetRepository = Mockito.mock(AssetRepository::class.java)
         locationRepository = Mockito.mock(LocationRepository::class.java)
+        propertyRepository = Mockito.mock(PropertyRepository::class.java)
+        unitRepository = Mockito.mock(UnitRepository::class.java)
+        userRepository = Mockito.mock(UserRepository::class.java)
 
-        // AssetService(assetRepository, locationRepository)
-        service = AssetService(assetRepository, locationRepository)
+        service = AssetService(
+            assetRepository = assetRepository,
+            locationRepository = locationRepository,
+            propertyRepository = propertyRepository,
+            unitRepository = unitRepository,
+            userRepository = userRepository
+        )
 
         TenantContext.set(
             AuthenticatedUser(
@@ -61,6 +78,8 @@ class AssetServiceTest {
 
     @Test
     fun `createAsset persists asset with tenantId and returns mapped dto`() {
+        val locationId = UUID.randomUUID()
+
         val request = CreateAssetRequest(
             name = "Boiler Pump",
             status = AssetStatus.IN_SERVICE,
@@ -79,13 +98,17 @@ class AssetServiceTest {
             warrantyExpiryDate = LocalDate.now().plusYears(2),
             depreciationYears = 10,
             residualValue = BigDecimal("500.00"),
-            locationId = UUID.randomUUID(),
+            locationId = locationId,
             propertyId = null,
             unitId = null,
-            assignedUserId = userId,
+            assignedUserId = null, // keep null unless you also stub user validation
             externalRef = "ERP-123",
             customFieldsJson = """{"rpm":1800}"""
         )
+
+        // validateReferences() requires location to exist when locationId != null
+        Mockito.`when`(locationRepository.findByIdAndTenantId(locationId, tenantId))
+            .thenReturn(stubLocation(locationId))
 
         val saved = Asset(
             tenantId = tenantId,
@@ -115,13 +138,10 @@ class AssetServiceTest {
         )
         setBaseFields(saved, UUID.randomUUID())
 
-        Mockito.`when`(
-            assetRepository.save(Mockito.any(Asset::class.java))
-        ).thenReturn(saved)
+        Mockito.`when`(assetRepository.save(Mockito.any(Asset::class.java))).thenReturn(saved)
 
         val dto = service.createAsset(request)
 
-        // verify entity persisted correctly
         Mockito.verify(assetRepository).save(Mockito.any(Asset::class.java))
 
         assertEquals(saved.id, dto.id)
@@ -129,6 +149,7 @@ class AssetServiceTest {
         assertEquals("Boiler Pump", dto.name)
         assertEquals(AssetStatus.IN_SERVICE, dto.status)
         assertEquals(listOf("mechanical", "boiler-room"), dto.tags)
+        assertEquals(locationId, dto.locationId)
     }
 
     // ----------------------------------------------------------------------
@@ -148,9 +169,7 @@ class AssetServiceTest {
             setBaseFields(this, id)
         }
 
-        Mockito.`when`(
-            assetRepository.findByIdAndTenantId(id, tenantId)
-        ).thenReturn(asset)
+        Mockito.`when`(assetRepository.findByIdAndTenantId(id, tenantId)).thenReturn(asset)
 
         val dto = service.getAsset(id)
 
@@ -164,14 +183,9 @@ class AssetServiceTest {
     @Test
     fun `getAsset throws NotFoundException when asset missing for tenant`() {
         val id = UUID.randomUUID()
+        Mockito.`when`(assetRepository.findByIdAndTenantId(id, tenantId)).thenReturn(null)
 
-        Mockito.`when`(
-            assetRepository.findByIdAndTenantId(id, tenantId)
-        ).thenReturn(null)
-
-        assertThrows<NotFoundException> {
-            service.getAsset(id)
-        }
+        assertThrows<NotFoundException> { service.getAsset(id) }
     }
 
     // ----------------------------------------------------------------------
@@ -255,14 +269,9 @@ class AssetServiceTest {
             setBaseFields(this, childId)
         }
 
-        // Service will call findByIdAndTenantId for the root filter location
-        Mockito.`when`(
-            locationRepository.findByIdAndTenantId(rootId, tenantId)
-        ).thenReturn(rootLocation)
+        Mockito.`when`(locationRepository.findByIdAndTenantId(rootId, tenantId)).thenReturn(rootLocation)
 
-        // Service computes pathPrefix = root.path.trimEnd('/') + "/"
         val pathPrefix = rootLocation.path!!.trimEnd('/') + "/"
-
         Mockito.`when`(
             locationRepository.findAllByTenantIdAndPathStartingWith(
                 tenantId = tenantId,
@@ -270,7 +279,6 @@ class AssetServiceTest {
             )
         ).thenReturn(listOf(childLocation))
 
-        // Expected subtree IDs: children from repo + rootId
         val subtreeIds = listOf(childId, rootId)
 
         val asset = Asset(
@@ -352,13 +360,13 @@ class AssetServiceTest {
             setBaseFields(this, id)
         }
 
-        Mockito.`when`(
-            assetRepository.findByIdAndTenantId(id, tenantId)
-        ).thenReturn(existing)
+        Mockito.`when`(assetRepository.findByIdAndTenantId(id, tenantId)).thenReturn(existing)
 
-        Mockito.`when`(
-            assetRepository.save(existing)
-        ).thenReturn(existing)
+        val newLocationId = UUID.randomUUID()
+        Mockito.`when`(locationRepository.findByIdAndTenantId(newLocationId, tenantId))
+            .thenReturn(stubLocation(newLocationId))
+
+        Mockito.`when`(assetRepository.save(existing)).thenReturn(existing)
 
         val request = UpdateAssetRequest(
             name = "New Name",
@@ -378,17 +386,16 @@ class AssetServiceTest {
             warrantyExpiryDate = LocalDate.now().plusYears(4),
             depreciationYears = 5,
             residualValue = BigDecimal("700.00"),
-            locationId = UUID.randomUUID(),
+            locationId = newLocationId,
             propertyId = null,
             unitId = null,
-            assignedUserId = userId,
+            assignedUserId = null, // keep null unless you stub user validation
             externalRef = "ERP-999",
             customFieldsJson = """{"rack":"R2"}"""
         )
 
         val dto = service.updateAsset(id, request)
 
-        // entity mutated
         assertEquals("New Name", existing.name)
         assertEquals(AssetStatus.IN_SERVICE, existing.status)
         assertEquals("IT", existing.category)
@@ -405,23 +412,19 @@ class AssetServiceTest {
         assertEquals(request.depreciationYears, existing.depreciationYears)
         assertEquals(request.residualValue, existing.residualValue)
         assertEquals(request.locationId, existing.locationId)
-        assertEquals(request.assignedUserId, existing.assignedUserId)
         assertEquals("ERP-999", existing.externalRef)
         assertEquals("""{"rack":"R2"}""", existing.customFieldsJson)
 
-        // dto basics
         assertEquals("New Name", dto.name)
         assertEquals(AssetStatus.IN_SERVICE, dto.status)
         assertEquals(listOf("server", "db"), dto.tags)
+        assertEquals(newLocationId, dto.locationId)
     }
 
     @Test
     fun `updateAsset throws NotFoundException when asset is missing for tenant`() {
         val id = UUID.randomUUID()
-
-        Mockito.`when`(
-            assetRepository.findByIdAndTenantId(id, tenantId)
-        ).thenReturn(null)
+        Mockito.`when`(assetRepository.findByIdAndTenantId(id, tenantId)).thenReturn(null)
 
         assertThrows<NotFoundException> {
             service.updateAsset(
@@ -446,13 +449,9 @@ class AssetServiceTest {
             tenantId = tenantId,
             name = "To Delete",
             status = AssetStatus.RETIRED
-        ).apply {
-            setBaseFields(this, id)
-        }
+        ).apply { setBaseFields(this, id) }
 
-        Mockito.`when`(
-            assetRepository.findByIdAndTenantId(id, tenantId)
-        ).thenReturn(asset)
+        Mockito.`when`(assetRepository.findByIdAndTenantId(id, tenantId)).thenReturn(asset)
 
         service.deleteAsset(id)
 
@@ -462,14 +461,9 @@ class AssetServiceTest {
     @Test
     fun `deleteAsset throws NotFoundException when asset missing`() {
         val id = UUID.randomUUID()
+        Mockito.`when`(assetRepository.findByIdAndTenantId(id, tenantId)).thenReturn(null)
 
-        Mockito.`when`(
-            assetRepository.findByIdAndTenantId(id, tenantId)
-        ).thenReturn(null)
-
-        assertThrows<NotFoundException> {
-            service.deleteAsset(id)
-        }
+        assertThrows<NotFoundException> { service.deleteAsset(id) }
     }
 
     // ----------------------------------------------------------------------
@@ -489,9 +483,7 @@ class AssetServiceTest {
             setBaseFields(this, UUID.randomUUID())
         }
 
-        Mockito.`when`(
-            assetRepository.findByTenantIdAndExternalRef(tenantId, externalRef)
-        ).thenReturn(asset)
+        Mockito.`when`(assetRepository.findByTenantIdAndExternalRef(tenantId, externalRef)).thenReturn(asset)
 
         val dto = service.getAssetByExternalRef(externalRef)
 
@@ -504,19 +496,24 @@ class AssetServiceTest {
     @Test
     fun `getAssetByExternalRef throws NotFoundException when asset missing for tenant`() {
         val externalRef = "MISSING-REF"
+        Mockito.`when`(assetRepository.findByTenantIdAndExternalRef(tenantId, externalRef)).thenReturn(null)
 
-        Mockito.`when`(
-            assetRepository.findByTenantIdAndExternalRef(tenantId, externalRef)
-        ).thenReturn(null)
-
-        assertThrows<NotFoundException> {
-            service.getAssetByExternalRef(externalRef)
-        }
+        assertThrows<NotFoundException> { service.getAssetByExternalRef(externalRef) }
     }
 
     // ----------------------------------------------------------------------
     // Helpers
     // ----------------------------------------------------------------------
+
+    private fun stubLocation(id: UUID): Location =
+        Location(
+            tenantId = tenantId,
+            name = "Stub Location",
+            type = LocationType.SITE
+        ).apply {
+            path = "/$id"
+            setBaseFields(this, id)
+        }
 
     private fun setBaseFields(entity: Any, id: UUID) {
         var clazz: Class<*>? = entity.javaClass

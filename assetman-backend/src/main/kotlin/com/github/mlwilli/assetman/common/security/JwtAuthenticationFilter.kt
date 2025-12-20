@@ -25,33 +25,27 @@ class JwtAuthenticationFilter(
             if (header != null && header.startsWith("Bearer ")) {
                 val token = header.substring(7)
 
-                val user = try {
-                    jwtTokenProvider.parseToken(token)
-                } catch (ex: Exception) {
-                    // Any parse/validation failure must be treated as "unauthenticated"
-                    // so clients can refresh tokens correctly.
+                val user = jwtTokenProvider.parseToken(token)
+
+                // Invalid token -> treat as anonymous; do NOT short-circuit response
+                if (user == null) {
+                    TenantContext.clear()
                     SecurityContextHolder.clearContext()
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired token")
+                    chain.doFilter(request, response)
                     return
                 }
 
-                if (user != null) {
-                    // Populate TenantContext for domain services
-                    TenantContext.set(user)
 
-                    // Populate Spring Security context for @PreAuthorize, etc.
-                    val auth = UsernamePasswordAuthenticationToken(
-                        user,
-                        null,
-                        user.roles.map { SimpleGrantedAuthority("ROLE_$it") }
-                    )
-                    SecurityContextHolder.getContext().authentication = auth
-                } else {
-                    // Token present but did not resolve to a user => unauthenticated
-                    SecurityContextHolder.clearContext()
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired token")
-                    return
-                }
+                // Populate TenantContext for domain services
+                TenantContext.set(user)
+
+                // Populate Spring Security context for @PreAuthorize, etc.
+                val auth = UsernamePasswordAuthenticationToken(
+                    user,
+                    null,
+                    user.roles.map { SimpleGrantedAuthority("ROLE_$it") }
+                )
+                SecurityContextHolder.getContext().authentication = auth
             }
 
             chain.doFilter(request, response)

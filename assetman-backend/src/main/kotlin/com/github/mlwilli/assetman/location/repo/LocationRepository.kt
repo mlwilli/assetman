@@ -19,6 +19,8 @@ interface LocationRepository : JpaRepository<Location, UUID> {
 
     fun findAllByTenantIdAndActiveTrueOrderByNameAsc(tenantId: UUID): List<Location>
 
+    fun countByTenantId(tenantId: UUID): Long
+
     @Query(
         """
         SELECT l 

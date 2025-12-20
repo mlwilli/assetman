@@ -1,0 +1,49 @@
+<ng-container *ngIf="(state$ | async) as s">
+  <mat-card>
+    <mat-progress-bar *ngIf="s.kind === 'loading'" mode="indeterminate"></mat-progress-bar>
+
+    <div class="header">
+      <a mat-button routerLink="/locations">Back</a>
+
+      <ng-container *ngIf="s.kind === 'ready' && canManageLocations">
+        <a mat-stroked-button [routerLink]="['/locations', s.location.id, 'edit']">
+          Edit
+        </a>
+        <button mat-raised-button color="warn" (click)="deleteLocation(s.location)">
+          Delete
+        </button>
+      </ng-container>
+    </div>
+
+    <div class="error" *ngIf="s.kind === 'error'">
+      {{ s.message }}
+    </div>
+
+    <div *ngIf="s.kind === 'ready'" class="body">
+      <h2 class="title">{{ s.location.name }}</h2>
+
+      <div class="kv">
+        <div class="k">Type</div><div class="v">{{ s.location.type }}</div>
+        <div class="k">Code</div><div class="v">{{ s.location.code || '-' }}</div>
+        <div class="k">Active</div><div class="v">{{ s.location.active }}</div>
+        <div class="k">Parent</div><div class="v">{{ s.location.parentId || '-' }}</div>
+        <div class="k">Path</div><div class="v">{{ s.location.path || '-' }}</div>
+      </div>
+
+      <div class="section">
+        <div class="label">Description</div>
+        <div class="value">{{ s.location.description || '-' }}</div>
+      </div>
+
+      <div class="section">
+        <div class="label">External Ref</div>
+        <div class="value">{{ s.location.externalRef || '-' }}</div>
+      </div>
+
+      <div class="section">
+        <div class="label">Custom Fields (JSON)</div>
+        <pre class="json">{{ s.location.customFieldsJson || '-' }}</pre>
+      </div>
+    </div>
+  </mat-card>
+</ng-container>

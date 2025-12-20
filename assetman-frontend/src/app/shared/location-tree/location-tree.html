@@ -1,0 +1,96 @@
+<mat-tree
+  [dataSource]="dataSource"
+  [treeControl]="treeControl"
+  class="tree"
+>
+  <!-- Leaf -->
+  <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
+    <button mat-icon-button class="toggle" disabled aria-hidden="true">
+      <mat-icon>chevron_right</mat-icon>
+    </button>
+
+    <!-- Navigate mode -->
+    <a
+      *ngIf="mode === 'navigate'"
+      class="node"
+      [routerLink]="['/locations', node.id]"
+    >
+      <span class="name">{{ node.name }}</span>
+      <span class="meta">
+        <span class="pill">{{ node.type }}</span>
+        <span class="muted" *ngIf="node.code">{{ node.code }}</span>
+        <span class="muted" *ngIf="node.active === false">Inactive</span>
+      </span>
+    </a>
+
+    <!-- Select mode -->
+    <button
+      *ngIf="mode === 'select'"
+      type="button"
+      class="node select"
+      [class.selected]="node.id === selectedId"
+      (click)="onNodeClick(node)"
+    >
+      <span class="name">{{ node.name }}</span>
+      <span class="meta">
+        <span class="pill">{{ node.type }}</span>
+        <span class="muted" *ngIf="node.code">{{ node.code }}</span>
+        <span class="muted" *ngIf="node.active === false">Inactive</span>
+      </span>
+    </button>
+  </mat-tree-node>
+
+  <!-- Expandable -->
+  <mat-nested-tree-node *matTreeNodeDef="let node; when: hasChild">
+    <div class="row" matTreeNodePadding>
+      <button
+        mat-icon-button
+        class="toggle"
+        (click)="toggle(node)"
+        [attr.aria-label]="treeControl.isExpanded(node) ? 'Collapse' : 'Expand'"
+      >
+        <mat-icon>
+          {{ treeControl.isExpanded(node) ? 'expand_more' : 'chevron_right' }}
+        </mat-icon>
+      </button>
+
+      <!-- Navigate mode -->
+      <a
+        *ngIf="mode === 'navigate'"
+        class="node"
+        [routerLink]="['/locations', node.id]"
+      >
+        <span class="name">{{ node.name }}</span>
+        <span class="meta">
+          <span class="pill">{{ node.type }}</span>
+          <span class="muted" *ngIf="node.code">{{ node.code }}</span>
+          <span class="muted" *ngIf="node.active === false">Inactive</span>
+        </span>
+      </a>
+
+      <!-- Select mode -->
+      <button
+        *ngIf="mode === 'select'"
+        type="button"
+        class="node select"
+        [class.selected]="node.id === selectedId"
+        (click)="onNodeClick(node)"
+      >
+        <span class="name">{{ node.name }}</span>
+        <span class="meta">
+          <span class="pill">{{ node.type }}</span>
+          <span class="muted" *ngIf="node.code">{{ node.code }}</span>
+          <span class="muted" *ngIf="node.active === false">Inactive</span>
+        </span>
+      </button>
+    </div>
+
+    <div class="children" [class.hidden]="!treeControl.isExpanded(node)">
+      <ng-container matTreeNodeOutlet></ng-container>
+    </div>
+  </mat-nested-tree-node>
+</mat-tree>
+
+<div *ngIf="mode === 'select'" class="select-actions">
+  <button mat-button type="button" (click)="clearSelection()">No parent (root)</button>
+</div>

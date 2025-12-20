@@ -1,11 +1,42 @@
 export type Uuid = string;
 
 /**
- * We intentionally keep AssetStatus as string for now.
- * Reason: we haven't confirmed backend enum values (e.g. IN_SERVICE, RETIRED, etc.).
- * This avoids guessing while still allowing filtering by passing raw text.
+ * Backend enum values (AssetStatus.kt).
+ * Keep this as a string union so the UI is type-safe and we never send invalid values.
  */
-export type AssetStatus = string;
+export type AssetStatus =
+  | 'PLANNED'
+  | 'PROCURED'
+  | 'IN_SERVICE'
+  | 'UNDER_MAINTENANCE'
+  | 'RETIRED'
+  | 'DISPOSED';
+
+export interface SelectOption<T extends string> {
+  value: T;
+  label: string;
+}
+
+/**
+ * Single source of truth for status dropdowns and display labels.
+ */
+export const ASSET_STATUS_OPTIONS: ReadonlyArray<SelectOption<AssetStatus>> = [
+  { value: 'PLANNED', label: 'Planned' },
+  { value: 'PROCURED', label: 'Procured' },
+  { value: 'IN_SERVICE', label: 'In Service' },
+  { value: 'UNDER_MAINTENANCE', label: 'Under Maintenance' },
+  { value: 'RETIRED', label: 'Retired' },
+  { value: 'DISPOSED', label: 'Disposed' },
+] as const;
+
+/**
+ * Utility for displaying a friendly label when you only have the enum value.
+ */
+export function assetStatusLabel(status: string | null | undefined): string {
+  if (!status) return '-';
+  const found = ASSET_STATUS_OPTIONS.find((o) => o.value === status);
+  return found?.label ?? String(status);
+}
 
 export interface PageResponse<T> {
   content: T[];

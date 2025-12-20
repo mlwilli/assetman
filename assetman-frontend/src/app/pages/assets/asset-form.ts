@@ -10,10 +10,25 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
+
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+
+import { PropertyPickerComponent } from '../../shared/property-picker/property-picker';
+import { UnitPickerComponent } from '../../shared/unit-picker/unit-picker';
+import { UserPickerComponent } from '../../shared/user-picker/user-picker';
+
 
 import { AssetApi } from '../../core/assets/asset.api';
-import { AssetDto, AssetUpsertRequest } from '../../core/assets/asset.models';
+import {
+  AssetDto,
+  AssetStatus,
+  AssetUpsertRequest,
+  ASSET_STATUS_OPTIONS,
+} from '../../core/assets/asset.models';
 import { AuthService } from '../../core/auth/auth.service';
+import { LocationPickerComponent } from '../../shared/location-picker/location-picker';
 
 type ViewState =
   | { kind: 'loading'; mode: 'create' | 'edit'; id?: string }
@@ -30,8 +45,15 @@ type ViewState =
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     MatButtonModule,
+    PropertyPickerComponent,
+    UnitPickerComponent,
+    UserPickerComponent,
     MatProgressBarModule,
+    LocationPickerComponent,
+    MatDatepickerModule,
+    MatNativeDateModule,
   ],
   templateUrl: './asset-form.html',
   styleUrl: './asset-form.scss',
@@ -43,6 +65,8 @@ export class AssetFormPageComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
 
+  readonly statusOptions = ASSET_STATUS_OPTIONS;
+
   get canManageAssets(): boolean {
     const roles = this.normalizeRoles((this.auth.currentUser as any)?.roles);
     return this.hasAnyRole(roles, ['OWNER', 'ADMIN', 'MANAGER']);
@@ -50,7 +74,7 @@ export class AssetFormPageComponent {
 
   readonly form = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(200)]],
-    status: ['', [Validators.required]],
+    status: ['' as '' | AssetStatus, [Validators.required]],
 
     category: [''],
     code: [''],
@@ -67,11 +91,11 @@ export class AssetFormPageComponent {
     unitId: [''],
     assignedUserId: [''],
 
-    purchaseDate: [''],
-    inServiceDate: [''],
-    retiredDate: [''],
-    disposedDate: [''],
-    warrantyExpiryDate: [''],
+    purchaseDate: [null as Date | null],
+    inServiceDate: [null as Date | null],
+    retiredDate: [null as Date | null],
+    disposedDate: [null as Date | null],
+    warrantyExpiryDate: [null as Date | null],
 
     purchaseCost: [''],
     residualValue: [''],
@@ -80,35 +104,57 @@ export class AssetFormPageComponent {
     customFieldsJson: [''],
   });
 
+  get selectedLocationId(): string | null {
+    const v = (this.form.get('locationId')?.value ?? '').toString().trim();
+    return v ? v : null;
+  }
+
+  onLocationSelected(id: string | null) {
+    this.form.patchValue({ locationId: id ?? '' });
+  }
+
   readonly state$ = this.route.paramMap.pipe(
-    map(pm => pm.get('id')),
-    switchMap(id => {
+    map((pm) => pm.get('id')),
+    switchMap((id) => {
       const mode: 'create' | 'edit' = id ? 'edit' : 'create';
 
       if (!this.canManageAssets) {
-        return of({ kind: 'error', mode, message: 'You do not have permission to manage assets.' } as ViewState);
+        return of({
+          kind: 'error',
+          mode,
+          message: 'You do not have permission to manage assets.',
+        } as ViewState);
       }
 
       if (!id) {
         this.form.reset({
           name: '',
-          status: '',
+          status: '' as any,
           tagsCsv: '',
+          locationId: '',
+
+          purchaseDate: null,
+          inServiceDate: null,
+          retiredDate: null,
+          disposedDate: null,
+          warrantyExpiryDate: null,
         });
         return of({ kind: 'ready', mode } as ViewState);
       }
 
+
       return this.api.getAsset(id).pipe(
-        tap(asset => this.patchForm(asset)),
-        map(asset => ({ kind: 'ready', mode, asset } as ViewState)),
+        tap((asset) => this.patchForm(asset)),
+        map((asset) => ({ kind: 'ready', mode, asset } as ViewState)),
         startWith({ kind: 'loading', mode, id } as ViewState),
-        catchError(err => of(this.toErrorState(err, mode))),
+        catchError((err) => of(this.toErrorState(err, mode))),
       );
     }),
   );
 
   submit(mode: 'create' | 'edit', existing?: AssetDto) {
     if (!this.canManageAssets) return;
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -134,7 +180,7 @@ export class AssetFormPageComponent {
   private patchForm(a: AssetDto) {
     this.form.patchValue({
       name: a.name ?? '',
-      status: (a.status ?? '') as string,
+      status: (a.status ?? '') as any,
       category: a.category ?? '',
       code: a.code ?? '',
       assetTag: a.assetTag ?? '',
@@ -142,18 +188,19 @@ export class AssetFormPageComponent {
       manufacturer: a.manufacturer ?? '',
       model: a.model ?? '',
       externalRef: a.externalRef ?? '',
-      tagsCsv: (a.tags?.length ? a.tags.join(', ') : ''),
+      tagsCsv: a.tags?.length ? a.tags.join(', ') : '',
 
       locationId: a.locationId ?? '',
       propertyId: a.propertyId ?? '',
       unitId: a.unitId ?? '',
       assignedUserId: a.assignedUserId ?? '',
 
-      purchaseDate: a.purchaseDate ?? '',
-      inServiceDate: a.inServiceDate ?? '',
-      retiredDate: a.retiredDate ?? '',
-      disposedDate: a.disposedDate ?? '',
-      warrantyExpiryDate: a.warrantyExpiryDate ?? '',
+      purchaseDate: this.parseIsoDate(a.purchaseDate),
+      inServiceDate: this.parseIsoDate(a.inServiceDate),
+      retiredDate: this.parseIsoDate(a.retiredDate),
+      disposedDate: this.parseIsoDate(a.disposedDate),
+      warrantyExpiryDate: this.parseIsoDate(a.warrantyExpiryDate),
+
 
       purchaseCost: a.purchaseCost != null ? String(a.purchaseCost) : '',
       residualValue: a.residualValue != null ? String(a.residualValue) : '',
@@ -187,12 +234,12 @@ export class AssetFormPageComponent {
 
     const tags = (v.tagsCsv ?? '')
       .split(',')
-      .map(t => t.trim())
+      .map((t) => t.trim())
       .filter(Boolean);
 
     return {
       name: String(v.name ?? '').trim(),
-      status: String(v.status ?? '').trim(),
+      status: String(v.status ?? '').trim() as AssetStatus,
 
       category: clean(v.category),
       code: clean(v.code),
@@ -209,11 +256,11 @@ export class AssetFormPageComponent {
       unitId: clean(v.unitId),
       assignedUserId: clean(v.assignedUserId),
 
-      purchaseDate: clean(v.purchaseDate),
-      inServiceDate: clean(v.inServiceDate),
-      retiredDate: clean(v.retiredDate),
-      disposedDate: clean(v.disposedDate),
-      warrantyExpiryDate: clean(v.warrantyExpiryDate),
+      purchaseDate: this.toIsoDate(v.purchaseDate),
+      inServiceDate: this.toIsoDate(v.inServiceDate),
+      retiredDate: this.toIsoDate(v.retiredDate),
+      disposedDate: this.toIsoDate(v.disposedDate),
+      warrantyExpiryDate: this.toIsoDate(v.warrantyExpiryDate),
 
       purchaseCost: parseNumberOrNull(v.purchaseCost),
       residualValue: parseNumberOrNull(v.residualValue),
@@ -225,10 +272,17 @@ export class AssetFormPageComponent {
 
   private toErrorState(err: unknown, mode: 'create' | 'edit'): ViewState {
     if (err instanceof HttpErrorResponse) {
-      const msg = (err.error as any)?.message || err.message || `Request failed (${err.status})`;
+      const msg =
+        (err.error as any)?.message ||
+        err.message ||
+        `Request failed (${err.status})`;
       return { kind: 'error', mode, message: msg };
     }
-    return { kind: 'error', mode, message: 'Unexpected error while loading asset.' };
+    return {
+      kind: 'error',
+      mode,
+      message: 'Unexpected error while loading asset.',
+    };
   }
 
   private normalizeRoles(raw: unknown): string[] {
@@ -240,6 +294,80 @@ export class AssetFormPageComponent {
 
   private hasAnyRole(userRoles: string[], required: string[]): boolean {
     const set = new Set(userRoles);
-    return required.some(r => set.has(r));
+    return required.some((r) => set.has(r));
   }
+
+  private parseIsoDate(value: string | null | undefined): Date | null {
+    if (!value) return null;
+    // Expecting YYYY-MM-DD from backend
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (!m) return null;
+
+    const year = Number(m[1]);
+    const month = Number(m[2]); // 1-12
+    const day = Number(m[3]);
+
+    // Construct as local date (no timezone shifting surprises from Date.parse)
+    const d = new Date(year, month - 1, day);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  private toIsoDate(value: unknown): string | null {
+    if (!value) return null;
+
+    // If datepicker gave us a Date
+    if (value instanceof Date) {
+      if (Number.isNaN(value.getTime())) return null;
+      const y = value.getFullYear();
+      const m = String(value.getMonth() + 1).padStart(2, '0');
+      const d = String(value.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    // If something else slipped in (string), only accept strict YYYY-MM-DD
+    const s = String(value).trim();
+    if (!s) return null;
+    return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+  }
+
+  get selectedUnitId(): string | null {
+    const v = (this.form.get('unitId')?.value ?? '').toString().trim();
+    return v ? v : null;
+  }
+
+  get selectedAssignedUserId(): string | null {
+    const v = (this.form.get('assignedUserId')?.value ?? '').toString().trim();
+    return v ? v : null;
+  }
+
+  onUnitSelected(id: string | null) {
+    this.form.patchValue({ unitId: id ?? '' });
+  }
+
+  onAssignedUserSelected(id: string | null) {
+    this.form.patchValue({ assignedUserId: id ?? '' });
+  }
+
+  get selectedPropertyId(): string | null {
+    const v = (this.form.get('propertyId')?.value ?? '').toString().trim();
+    return v ? v : null;
+  }
+
+  onPropertySelected(id: string | null) {
+    const current = (this.form.get('propertyId')?.value ?? '').toString().trim();
+    const next = (id ?? '').trim();
+
+    // If property changes, clear unit to prevent inconsistent association
+    if (current && next && current !== next) {
+      this.form.patchValue({ unitId: '' });
+    }
+    if (!next) {
+      this.form.patchValue({ unitId: '' });
+    }
+
+    this.form.patchValue({ propertyId: next });
+  }
+
+
+
 }

@@ -1,5 +1,15 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, ReplaySubject, catchError, map, of, switchMap, tap, throwError } from 'rxjs';
+import {
+  BehaviorSubject,
+  Observable,
+  ReplaySubject,
+  catchError,
+  map,
+  of,
+  switchMap,
+  tap,
+  throwError,
+} from 'rxjs';
 import { AuthApi } from './auth.api';
 import { AuthDto, CurrentUserDto, LoginRequest } from './auth.models';
 import { TokenStorage } from './token.storage';
@@ -30,7 +40,6 @@ export class AuthService {
 
   /** True once we have attempted to resolve /me (or determined no session). */
   get isSessionReady(): boolean {
-    // Not directly readable from ReplaySubject; use sessionInitStarted + currentUser checks in guard.
     return this.sessionInitStarted;
   }
 
@@ -81,13 +90,21 @@ export class AuthService {
     );
   }
 
+  /**
+   * Logout should:
+   * - attempt server-side refresh token revocation IF we have a refresh token
+   * - always clear local tokens + user state (even if server call fails)
+   */
   logout(): Observable<void> {
-    return this.api.logout().pipe(
+    const refreshToken = this.tokens.getRefreshToken();
+
+    const call$ = refreshToken ? this.api.logout({ refreshToken }) : of(void 0);
+
+    return call$.pipe(
       catchError(() => of(void 0)),
       tap(() => {
         this.tokens.clear();
         this.userSubject.next(null);
-        // keep sessionInitStarted true; session is now anonymous but "known"
         this.sessionReadySubject.next(true);
       }),
       map(() => void 0),

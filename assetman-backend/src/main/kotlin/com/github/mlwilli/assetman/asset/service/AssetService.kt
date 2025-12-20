@@ -7,24 +7,48 @@ import com.github.mlwilli.assetman.asset.web.AssetDto
 import com.github.mlwilli.assetman.asset.web.CreateAssetRequest
 import com.github.mlwilli.assetman.asset.web.UpdateAssetRequest
 import com.github.mlwilli.assetman.asset.web.toDto
+import com.github.mlwilli.assetman.common.error.BadRequestException
 import com.github.mlwilli.assetman.common.error.NotFoundException
 import com.github.mlwilli.assetman.common.security.currentTenantId
+import com.github.mlwilli.assetman.identity.repo.UserRepository
 import com.github.mlwilli.assetman.location.repo.LocationRepository
+import com.github.mlwilli.assetman.property.repo.PropertyRepository
+import com.github.mlwilli.assetman.property.repo.UnitRepository
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDate
 import java.util.UUID
 
 @Service
 class AssetService(
     private val assetRepository: AssetRepository,
-    private val locationRepository: LocationRepository
+    private val locationRepository: LocationRepository,
+    private val propertyRepository: PropertyRepository,
+    private val unitRepository: UnitRepository,
+    private val userRepository: UserRepository
 ) {
 
     @Transactional
     fun createAsset(request: CreateAssetRequest): AssetDto {
         val tenantId = currentTenantId()
+
+        validateReferences(
+            tenantId = tenantId,
+            locationId = request.locationId,
+            propertyId = request.propertyId,
+            unitId = request.unitId,
+            assignedUserId = request.assignedUserId
+        )
+
+        validateStatusAndDates(
+            status = request.status,
+            purchaseDate = request.purchaseDate,
+            inServiceDate = request.inServiceDate,
+            retiredDate = request.retiredDate,
+            disposedDate = request.disposedDate
+        )
 
         val asset = Asset(
             tenantId = tenantId,
@@ -122,6 +146,22 @@ class AssetService(
         val asset = assetRepository.findByIdAndTenantId(id, tenantId)
             ?: throw NotFoundException("Asset not found")
 
+        validateReferences(
+            tenantId = tenantId,
+            locationId = request.locationId,
+            propertyId = request.propertyId,
+            unitId = request.unitId,
+            assignedUserId = request.assignedUserId
+        )
+
+        validateStatusAndDates(
+            status = request.status,
+            purchaseDate = request.purchaseDate,
+            inServiceDate = request.inServiceDate,
+            retiredDate = request.retiredDate,
+            disposedDate = request.disposedDate
+        )
+
         asset.name = request.name
         asset.status = request.status
         asset.category = request.category
@@ -188,4 +228,69 @@ class AssetService(
         )
     }
 
+    // =========================
+    // Validation
+    // =========================
+
+    private fun validateReferences(
+        tenantId: UUID,
+        locationId: UUID?,
+        propertyId: UUID?,
+        unitId: UUID?,
+        assignedUserId: UUID?
+    ) {
+        if (locationId != null) {
+            locationRepository.findByIdAndTenantId(locationId, tenantId)
+                ?: throw NotFoundException("Location not found")
+        }
+
+        if (propertyId != null) {
+            propertyRepository.findByIdAndTenantId(propertyId, tenantId)
+                ?: throw NotFoundException("Property not found")
+        }
+
+        if (unitId != null) {
+            val unit = unitRepository.findByIdAndTenantId(unitId, tenantId)
+                ?: throw NotFoundException("Unit not found")
+
+            // If both provided, ensure unit belongs to property
+            if (propertyId != null && unit.propertyId != propertyId) {
+                throw BadRequestException("Unit does not belong to the selected property")
+            }
+        }
+
+        if (assignedUserId != null) {
+            userRepository.findByIdAndTenantId(assignedUserId, tenantId)
+                ?: throw NotFoundException("Assigned user not found")
+        }
+    }
+
+    private fun validateStatusAndDates(
+        status: AssetStatus,
+        purchaseDate: LocalDate?,
+        inServiceDate: LocalDate?,
+        retiredDate: LocalDate?,
+        disposedDate: LocalDate?
+    ) {
+        // Required dates by status
+        if (status == AssetStatus.RETIRED && retiredDate == null) {
+            throw BadRequestException("retiredDate is required when status is RETIRED")
+        }
+        if (status == AssetStatus.DISPOSED && disposedDate == null) {
+            throw BadRequestException("disposedDate is required when status is DISPOSED")
+        }
+
+        // Date ordering sanity checks
+        if (purchaseDate != null && disposedDate != null && disposedDate.isBefore(purchaseDate)) {
+            throw BadRequestException("disposedDate cannot be before purchaseDate")
+        }
+        if (purchaseDate != null && retiredDate != null && retiredDate.isBefore(purchaseDate)) {
+            throw BadRequestException("retiredDate cannot be before purchaseDate")
+        }
+
+        // consistency check: if IN_SERVICE and inServiceDate exists, it shouldn't be before purchaseDate
+        if (purchaseDate != null && inServiceDate != null && inServiceDate.isBefore(purchaseDate)) {
+            throw BadRequestException("inServiceDate cannot be before purchaseDate")
+        }
+    }
 }
