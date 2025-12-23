@@ -36,12 +36,6 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/assets/assets').then(m => m.AssetsPageComponent),
       },
-      {
-        path: 'assets/:id',
-        loadComponent: () =>
-          import('./pages/assets/asset-detail').then(m => m.AssetDetailPageComponent),
-      },
-
       // Assets (create/edit: restricted)
       {
         path: 'assets/new',
@@ -55,7 +49,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/assets/asset-form').then(m => m.AssetFormPageComponent),
       },
-
+      {
+        path: 'assets/:id',
+        loadComponent: () =>
+          import('./pages/assets/asset-detail').then(m => m.AssetDetailPageComponent),
+      },
       // Locations (list)
       {
         path: 'locations',

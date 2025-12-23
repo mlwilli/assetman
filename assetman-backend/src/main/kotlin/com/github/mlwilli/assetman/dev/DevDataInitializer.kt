@@ -1,5 +1,6 @@
 package com.github.mlwilli.assetman.dev
 
+import com.github.mlwilli.assetman.asset.domain.Asset
 import com.github.mlwilli.assetman.identity.domain.Role
 import com.github.mlwilli.assetman.identity.domain.Tenant
 import com.github.mlwilli.assetman.identity.domain.User
@@ -16,6 +17,12 @@ import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
+import com.github.mlwilli.assetman.asset.service.AssetService
+import com.github.mlwilli.assetman.asset.domain.AssetStatus
+import com.github.mlwilli.assetman.asset.repo.AssetRepository
+import com.github.mlwilli.assetman.asset.web.CreateAssetRequest
+import com.github.mlwilli.assetman.common.security.TenantContext
+import java.math.BigDecimal
 
 @Component
 class DevDataInitializer(
@@ -23,8 +30,11 @@ class DevDataInitializer(
     private val tenantRepository: TenantRepository,
     private val userRepository: UserRepository,
     private val locationRepository: LocationRepository,
+    private val assetRepository: AssetRepository,
     private val passwordEncoder: PasswordEncoder
 ) : ApplicationRunner {
+
+
 
     private val log = LoggerFactory.getLogger(DevDataInitializer::class.java)
 
@@ -34,6 +44,26 @@ class DevDataInitializer(
 
         val tenant = seedTenantAndAdmin()
         seedLocationsIfEmpty(tenant)
+
+        val adminEmail = (System.getenv("ASSETMAN_DEV_ADMIN_EMAIL") ?: "admin@demo.com")
+            .trim()
+            .lowercase()
+
+        val admin = userRepository.findByTenantIdAndEmailIgnoreCase(tenant.id, adminEmail)
+            ?: run {
+                log.warn("DEV admin user not found after seed; skipping asset seed")
+                return
+            }
+
+        TenantContext.withTenantUser(
+            tenantId = tenant.id,
+            userId = admin.id,
+            email = admin.email,
+            roles = admin.roles.map { it.name }.toSet()
+        ) {
+            seedAssetsIfEmpty(tenant)
+        }
+
     }
 
     private fun seedTenantAndAdmin(): Tenant {
@@ -180,4 +210,77 @@ class DevDataInitializer(
 
         return locationRepository.save(saved)
     }
+
+    private fun seedAssetsIfEmpty(tenant: Tenant) {
+        val existing = assetRepository.countByTenantId(tenant.id)
+        // WARNING: count() is global. Prefer tenant-scoped if you have it.
+        // If you add a tenant-scoped count later, switch to that.
+        if (existing > 0) {
+            log.info("DEV assets already exist (global count={})", existing)
+            return
+        }
+
+        val locations = locationRepository.findAllByTenantIdOrderByNameAsc(tenant.id)
+        val hq = locations.firstOrNull { it.code == "HQ" } ?: locations.firstOrNull()
+
+        log.info("Seeding DEV assets for tenant='{}'", tenant.slug)
+
+        val assets = listOf(
+            Asset(
+                tenantId = tenant.id,
+                name = "Dell Server R740",
+                status = AssetStatus.IN_SERVICE,
+                category = "IT",
+                code = "ASSET-0001",
+                assetTag = "TAG-0001",
+                manufacturer = "Dell",
+                model = "PowerEdge R740",
+                serialNumber = "SRV-R740-0001",
+                tags = "server,critical",
+                locationId = hq?.id,
+                purchaseCost = BigDecimal("12500.00"),
+                depreciationYears = 5,
+                externalRef = "DEV-EXT-0001",
+                customFieldsJson = """{"rack":"R12","u":"14","ipAddress":"10.0.0.5"}"""
+            ),
+            Asset(
+                tenantId = tenant.id,
+                name = "HVAC Unit - Building A",
+                status = AssetStatus.UNDER_MAINTENANCE,
+                category = "HVAC",
+                code = "ASSET-0002",
+                assetTag = "TAG-0002",
+                manufacturer = "Trane",
+                model = "RTU-500",
+                serialNumber = "HVAC-0002",
+                tags = "hvac,roof",
+                locationId = locations.firstOrNull { it.code == "BLDG-A" }?.id ?: hq?.id,
+                purchaseCost = java.math.BigDecimal("22000.00"),
+                depreciationYears = 10,
+                externalRef = "DEV-EXT-0002"
+            ),
+            Asset(
+                tenantId = tenant.id,
+                name = "Forklift - Warehouse",
+                status = AssetStatus.IN_SERVICE,
+                category = "VEHICLE",
+                code = "ASSET-0003",
+                assetTag = "TAG-0003",
+                manufacturer = "Toyota",
+                model = "8FGCU25",
+                serialNumber = "FL-0003",
+                tags = "warehouse,forklift",
+                locationId = locations.firstOrNull { it.code == "WH" }?.id ?: hq?.id,
+                purchaseCost = java.math.BigDecimal("18000.00"),
+                depreciationYears = 7,
+                externalRef = "DEV-EXT-0003"
+            )
+        )
+
+        assetRepository.saveAll(assets)
+
+        log.info("DEV asset seed complete (created={})", assets.size)
+    }
+
+
 }

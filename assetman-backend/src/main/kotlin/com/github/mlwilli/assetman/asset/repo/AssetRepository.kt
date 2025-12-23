@@ -15,6 +15,7 @@ interface AssetRepository : JpaRepository<Asset, UUID> {
 
     // Tenant-scoped lookup by externalRef (assumes uniqueness per tenant)
     fun findByTenantIdAndExternalRef(tenantId: UUID, externalRef: String): Asset?
+    fun countByTenantId(tenantId: UUID): Long
 
     @Query(
         """
