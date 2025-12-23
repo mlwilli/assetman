@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.util.UUID
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 
 interface UnitRepository : JpaRepository<Unit, UUID> {
 // add repo changes back
@@ -35,4 +37,25 @@ interface UnitRepository : JpaRepository<Unit, UUID> {
     ): List<Unit>
 
     fun existsByTenantIdAndPropertyId(tenantId: UUID, propertyId: UUID): Boolean
+
+
+    @Query(
+        """
+  SELECT u
+  FROM Unit u
+  WHERE u.tenantId = :tenantId
+    AND (:propertyId IS NULL OR u.propertyId = :propertyId)
+    AND (:status IS NULL OR u.status = :status)
+    AND (:search IS NULL OR lower(u.name) LIKE lower(concat('%', :search, '%')))
+  ORDER BY u.name ASC
+  """
+    )
+    fun searchPage(
+        @Param("tenantId") tenantId: UUID,
+        @Param("propertyId") propertyId: UUID?,
+        @Param("status") status: UnitStatus?,
+        @Param("search") search: String?,
+        pageable: Pageable
+    ): Page<Unit>
+
 }

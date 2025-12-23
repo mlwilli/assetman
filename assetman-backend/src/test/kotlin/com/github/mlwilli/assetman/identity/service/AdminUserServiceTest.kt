@@ -10,6 +10,7 @@ import com.github.mlwilli.assetman.identity.repo.UserRepository
 import com.github.mlwilli.assetman.identity.web.CreateUserRequest
 import com.github.mlwilli.assetman.identity.web.UpdateUserRolesRequest
 import com.github.mlwilli.assetman.identity.web.UpdateUserStatusRequest
+import com.github.mlwilli.assetman.testsupport.pageOf
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -85,7 +86,7 @@ class AdminUserServiceTest {
             active = true
         )
 
-        val page = PageImpl(listOf(inactiveUser, alice, bob))
+        val page = pageOf(inactiveUser, alice, bob)
         val expectedPageable = PageRequest.of(0, Int.MAX_VALUE)
 
         Mockito.`when`(

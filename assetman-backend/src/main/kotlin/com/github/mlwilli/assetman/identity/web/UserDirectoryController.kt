@@ -16,18 +16,20 @@ class UserDirectoryController(
     private val service: UserDirectoryService
 ) {
 
-    @GetMapping
-    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','TECHNICIAN','VIEWER')")
-    fun listUsers(
+    @GetMapping("/directory")
+    @PreAuthorize(
+        "hasAnyRole('OWNER','ADMIN','MANAGER','TECHNICIAN') and " +
+                "(#activeOnly == true or hasAnyRole('OWNER','ADMIN'))"
+    )
+    fun listDirectory(
         @RequestParam(required = false) search: String?,
-        @RequestParam(defaultValue = "20") limit: Int,
-        @RequestParam(defaultValue = "true") activeOnly: Boolean
+        @RequestParam(required = false, defaultValue = "20") limit: Int,
+        @RequestParam(required = false, defaultValue = "true") activeOnly: Boolean
     ): List<UserDirectoryDto> =
         service.listDirectory(search, limit, activeOnly)
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','TECHNICIAN','VIEWER')")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','TECHNICIAN')")
     fun getUser(@PathVariable id: UUID): UserDirectoryDto =
         service.getUser(id)
 }
-

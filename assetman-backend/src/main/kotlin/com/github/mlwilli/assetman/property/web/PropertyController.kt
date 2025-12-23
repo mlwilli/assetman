@@ -2,6 +2,7 @@ package com.github.mlwilli.assetman.property.web
 
 import com.github.mlwilli.assetman.property.domain.PropertyType
 import com.github.mlwilli.assetman.property.service.PropertyService
+import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
@@ -17,9 +18,11 @@ class PropertyController(
     @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','TECHNICIAN','VIEWER')")
     fun listProperties(
         @RequestParam(required = false) type: PropertyType?,
-        @RequestParam(required = false) search: String?
+        @RequestParam(required = false) search: String?,
+        @RequestParam(defaultValue = "50") limit: Int
     ): List<PropertyDto> =
-        propertyService.listProperties(type, search)
+        propertyService.listProperties(type, search, limit)
+
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','TECHNICIAN','VIEWER')")
@@ -29,7 +32,7 @@ class PropertyController(
     @PostMapping
     @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER')")
     fun createProperty(
-        @RequestBody request: CreatePropertyRequest
+        @Valid @RequestBody request: CreatePropertyRequest
     ): ResponseEntity<PropertyDto> {
         val created = propertyService.createProperty(request)
         return ResponseEntity.ok(created)
@@ -39,7 +42,7 @@ class PropertyController(
     @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER')")
     fun updateProperty(
         @PathVariable id: UUID,
-        @RequestBody request: UpdatePropertyRequest
+        @Valid @RequestBody request: UpdatePropertyRequest
     ): ResponseEntity<PropertyDto> {
         val updated = propertyService.updateProperty(id, request)
         return ResponseEntity.ok(updated)

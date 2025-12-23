@@ -4,11 +4,12 @@ import com.github.mlwilli.assetman.common.security.currentTenantId
 import com.github.mlwilli.assetman.identity.domain.User
 import com.github.mlwilli.assetman.identity.repo.UserRepository
 import com.github.mlwilli.assetman.identity.web.UserDirectoryDto
-import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import com.github.mlwilli.assetman.common.error.NotFoundException
 import java.util.UUID
+import com.github.mlwilli.assetman.common.web.PagingLimits
+import com.github.mlwilli.assetman.common.web.firstPage
+import org.springframework.data.domain.Sort
 
 @Service
 class UserDirectoryService(
@@ -17,19 +18,23 @@ class UserDirectoryService(
 
     fun listDirectory(search: String?, limit: Int, activeOnly: Boolean): List<UserDirectoryDto> {
         val tenantId = currentTenantId()
-        val safeLimit = limit.coerceIn(1, 50)
 
-        val pageable = PageRequest.of(
-            0,
-            safeLimit,
-            Sort.by("active").descending().and(Sort.by("email").ascending())
+        val pageable = firstPage(
+            limit = limit,
+            defaultLimit = PagingLimits.DEFAULT_LIST_LIMIT,
+            maxLimit = PagingLimits.MAX_DIRECTORY_LIMIT,
+            sort = Sort.by("active").descending().and(Sort.by("email").ascending())
         )
 
         val q = (search ?: "").trim()
 
         val page =
             if (q.isBlank()) {
-                userRepository.findAllByTenantId(tenantId, pageable)
+                if (activeOnly) {
+                    userRepository.findAllByTenantIdAndActive(tenantId, true, pageable)
+                } else {
+                    userRepository.findAllByTenantId(tenantId, pageable)
+                }
             } else {
                 userRepository.searchDirectory(tenantId, q, activeOnly, pageable)
             }
