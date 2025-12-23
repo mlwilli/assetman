@@ -13,7 +13,9 @@ import org.junit.jupiter.api.assertThrows
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.whenever
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.crypto.password.PasswordEncoder
 import java.time.Instant
@@ -27,6 +29,8 @@ class AuthServiceTest {
     private lateinit var jwtTokenProvider: JwtTokenProvider
     private lateinit var passwordResetTokenRepository: PasswordResetTokenRepository
     private lateinit var revokedTokenRepository: RevokedTokenRepository
+    private lateinit var companyBootstrapService: CompanyBootstrapService
+
     private lateinit var service: AuthService
 
     private val tenantId = UUID.randomUUID()
@@ -40,6 +44,7 @@ class AuthServiceTest {
         jwtTokenProvider = Mockito.mock(JwtTokenProvider::class.java)
         passwordResetTokenRepository = Mockito.mock(PasswordResetTokenRepository::class.java)
         revokedTokenRepository = Mockito.mock(RevokedTokenRepository::class.java)
+        companyBootstrapService = Mockito.mock(CompanyBootstrapService::class.java)
 
         service = AuthService(
             tenantRepository,
@@ -47,7 +52,8 @@ class AuthServiceTest {
             passwordEncoder,
             jwtTokenProvider,
             passwordResetTokenRepository,
-            revokedTokenRepository
+            revokedTokenRepository,
+            companyBootstrapService
         )
 
         TenantContext.clear()
@@ -87,35 +93,39 @@ class AuthServiceTest {
         )
         setBaseEntityFields(user, userId)
 
-        Mockito.`when`(
-            tenantRepository.save(any())
-        ).thenReturn(tenant)
+        Mockito.`when`(tenantRepository.save(any())).thenReturn(tenant)
+        Mockito.`when`(passwordEncoder.encode(eq(request.adminPassword))).thenReturn("hashed")
+        Mockito.`when`(userRepository.save(any())).thenReturn(user)
 
+        // NEW: default company bootstrap invoked on tenant signup
         Mockito.`when`(
-            passwordEncoder.encode(eq(request.adminPassword))
-        ).thenReturn("hashed")
+            companyBootstrapService.bootstrapDefaultCompany(eq(tenant), eq(user))
+        ).thenReturn(
+            CompanyBootstrapService.BootstrapResult(
+                companyId = UUID.randomUUID(),
+                companySlug = "acme"
+            )
+        )
 
-        Mockito.`when`(
-            userRepository.save(any())
-        ).thenReturn(user)
-
-        Mockito.`when`(
+        // Access token should be generated WITHOUT companyId (cid is null)
+        whenever(
             jwtTokenProvider.generateAccessToken(
-                userId = eq(userId),
-                tenantId = eq(tenantId),
-                email = eq(user.email),
-                roles = eq(setOf("OWNER", "ADMIN"))
+                eq(userId),
+                eq(tenantId),
+                eq(user.email),
+                eq(setOf("OWNER", "ADMIN")),
+                anyOrNull()
             )
         ).thenReturn("access-token")
 
-        Mockito.`when`(
-            jwtTokenProvider.generateRefreshToken(eq(userId))
-        ).thenReturn("refresh-token")
+        Mockito.`when`(jwtTokenProvider.generateRefreshToken(eq(userId))).thenReturn("refresh-token")
 
         val dto = service.signupTenant(request)
 
         assertEquals("access-token", dto.accessToken)
         assertEquals("refresh-token", dto.refreshToken)
+
+        Mockito.verify(companyBootstrapService).bootstrapDefaultCompany(eq(tenant), eq(user))
     }
 
     // --------------------------------------------------------------------
@@ -145,17 +155,18 @@ class AuthServiceTest {
         Mockito.`when`(tenantRepository.findBySlug(eq("acme"))).thenReturn(tenant)
         Mockito.`when`(userRepository.findByTenantIdAndEmail(eq(tenantId), eq("user@acme.test"))).thenReturn(user)
         Mockito.`when`(passwordEncoder.matches(eq("pw"), eq("hashed"))).thenReturn(true)
-        Mockito.`when`(
+
+        whenever(
             jwtTokenProvider.generateAccessToken(
-                userId = eq(userId),
-                tenantId = eq(tenantId),
-                email = eq(user.email),
-                roles = eq(setOf("USER"))
+                eq(userId),
+                eq(tenantId),
+                eq(user.email),
+                eq(setOf("USER")),
+                anyOrNull()
             )
         ).thenReturn("access")
-        Mockito.`when`(
-            jwtTokenProvider.generateRefreshToken(eq(userId))
-        ).thenReturn("refresh")
+
+        Mockito.`when`(jwtTokenProvider.generateRefreshToken(eq(userId))).thenReturn("refresh")
 
         val dto = service.login(request)
 
@@ -215,18 +226,17 @@ class AuthServiceTest {
 
         Mockito.`when`(userRepository.findById(eq(userId))).thenReturn(java.util.Optional.of(user))
 
-        Mockito.`when`(
+        whenever(
             jwtTokenProvider.generateAccessToken(
-                userId = eq(userId),
-                tenantId = eq(tenantId),
-                email = eq(user.email),
-                roles = eq(setOf("USER"))
+                eq(userId),
+                eq(tenantId),
+                eq(user.email),
+                eq(setOf("USER")),
+                anyOrNull()
             )
         ).thenReturn("new-access")
 
-        Mockito.`when`(
-            jwtTokenProvider.generateRefreshToken(eq(userId))
-        ).thenReturn("new-refresh")
+        Mockito.`when`(jwtTokenProvider.generateRefreshToken(eq(userId))).thenReturn("new-refresh")
 
         val dto = service.refreshTokens(request)
 
@@ -256,7 +266,8 @@ class AuthServiceTest {
                 userId = userId,
                 tenantId = tenantId,
                 email = user.email,
-                roles = setOf("ADMIN")
+                roles = setOf("ADMIN"),
+                companyId = null
             )
         )
 
@@ -266,6 +277,8 @@ class AuthServiceTest {
         assertEquals(tenantId, dto.tenantId)
         assertEquals("current@acme.test", dto.email)
         assertEquals(listOf("ADMIN"), dto.roles)
+        assertNull(dto.companyId)
+        assertFalse(dto.companySelected)
     }
 
     // --------------------------------------------------------------------
@@ -293,7 +306,8 @@ class AuthServiceTest {
                 userId = userId,
                 tenantId = tenantId,
                 email = user.email,
-                roles = setOf("USER")
+                roles = setOf("USER"),
+                companyId = null
             )
         )
 
@@ -389,13 +403,4 @@ class AuthServiceTest {
         assertEquals("new-hash", user.passwordHash)
         assertTrue(token.used)
     }
-
-    // --------------------------------------------------------------------
-    // helpers
-    // --------------------------------------------------------------------
-
-
-
-
-
 }

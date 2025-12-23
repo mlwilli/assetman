@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: assetman-postgres
+    environment:
+      POSTGRES_DB: assetman
+      POSTGRES_USER: assetman
+      POSTGRES_PASSWORD: assetman
+    ports:
+      - "5432:5432"
+    volumes:
+      - assetman_pgdata:/var/lib/postgresql/data
+
+volumes:
+  assetman_pgdata:

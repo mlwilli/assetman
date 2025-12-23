@@ -1,0 +1,10 @@
+Test Backend
+
+cd D:\Users\homem\IdeaProjects\assetman\assetman-backend
+Remove-Item -Recurse -Force .\build\h2 -ErrorAction SilentlyContinue
+$env:SPRING_PROFILES_ACTIVE="local"
+.\gradlew clean test
+
+
+Run Frontend
+ng serve

@@ -26,8 +26,17 @@ class JwtTokenProvider(
 
     @PostConstruct
     fun init() {
-        key = Keys.hmacShaKeyFor(secret.toByteArray())
+        val normalized = secret.trim()
+        require(normalized.isNotBlank()) {
+            "JWT secret is missing. Set ASSETMAN_JWT_SECRET (or configure assetman.security.jwt.secret)."
+        }
+        // HS256 requires at least 256-bit (32 bytes) key
+        require(normalized.toByteArray(Charsets.UTF_8).size >= 32) {
+            "JWT secret is too short. Provide at least 32 bytes (256 bits) for HS256."
+        }
+        key = Keys.hmacShaKeyFor(normalized.toByteArray(Charsets.UTF_8))
     }
+
 
     /**
      * Access token for API calls.
@@ -41,11 +50,12 @@ class JwtTokenProvider(
         userId: UUID,
         tenantId: UUID,
         email: String,
-        roles: Set<String>
+        roles: Set<String>,
+        companyId: UUID? = null
     ): String {
         val now = Instant.now()
 
-        return Jwts.builder()
+        val builder = Jwts.builder()
             .subject(userId.toString())
             .claim("tid", tenantId.toString())
             .claim("email", email)
@@ -53,8 +63,14 @@ class JwtTokenProvider(
             .issuedAt(Date.from(now))
             .expiration(Date.from(now.plusSeconds(accessValidity)))
             .signWith(key)
-            .compact()
+
+        if (companyId != null) {
+            builder.claim("cid", companyId.toString())
+        }
+
+        return builder.compact()
     }
+
 
     /**
      * Refresh token:
@@ -97,11 +113,14 @@ class JwtTokenProvider(
                 ?.toSet()
                 ?: emptySet()
 
+            val companyId = claims["cid"]?.toString()?.takeIf { it.isNotBlank() }?.let(UUID::fromString)
+
             AuthenticatedUser(
                 userId = UUID.fromString(claims.subject),
                 tenantId = UUID.fromString(tenantId),
                 email = email,
-                roles = roles
+                roles = roles,
+                companyId = companyId
             )
         } catch (ex: Exception) {
             null

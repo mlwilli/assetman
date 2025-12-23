@@ -27,8 +27,10 @@ class AuthService(
     private val passwordEncoder: PasswordEncoder,
     private val jwtTokenProvider: JwtTokenProvider,
     private val passwordResetTokenRepository: PasswordResetTokenRepository,
-    private val revokedTokenRepository: RevokedTokenRepository
+    private val revokedTokenRepository: RevokedTokenRepository,
+    private val companyBootstrapService: CompanyBootstrapService
 ) {
+
 
     private val log = LoggerFactory.getLogger(AuthService::class.java)
 
@@ -38,14 +40,18 @@ class AuthService(
 
     /**
      * Central helper to build AuthDto from a User.
-     * Ensures we always use the same claims for access tokens.
+     *
+     * NOTE:
+     * - This intentionally does NOT include companyId (cid) claim.
+     * - Company selection happens via /api/companies/select which returns a NEW access token with cid.
      */
     private fun toAuthDto(user: User): AuthDto {
         val accessToken = jwtTokenProvider.generateAccessToken(
             userId = user.id,
             tenantId = user.tenantId,
             email = user.email,
-            roles = user.roles.map { it.name }.toSet()
+            roles = user.roles.map { it.name }.toSet(),
+            companyId = null
         )
         val refreshToken = jwtTokenProvider.generateRefreshToken(user.id)
         return AuthDto(accessToken, refreshToken)
@@ -60,7 +66,6 @@ class AuthService(
         val tenantSlug = request.tenantSlug.trim().lowercase()
         val adminEmail = request.adminEmail.trim().lowercase()
 
-        // Create tenant
         val tenant = tenantRepository.save(
             Tenant(
                 name = request.tenantName.trim(),
@@ -68,7 +73,6 @@ class AuthService(
             )
         )
 
-        // Create owner/admin user
         val user = userRepository.save(
             User(
                 tenantId = tenant.id,
@@ -79,12 +83,12 @@ class AuthService(
             )
         )
 
+        // Bootstrap initial company + membership (does NOT auto-select company in token)
+        companyBootstrapService.bootstrapDefaultCompany(tenant = tenant, ownerUser = user)
+
         return toAuthDto(user)
     }
 
-    /**
-     * Tenant-aware login: requires tenantSlug + email + password.
-     */
     @Transactional(readOnly = true)
     fun login(request: LoginRequest): AuthDto {
         val tenantSlug = request.tenantSlug.trim().lowercase()
@@ -96,23 +100,17 @@ class AuthService(
         val user = userRepository.findByTenantIdAndEmail(tenant.id, email)
             ?: throw BadCredentialsException("Invalid credentials")
 
-        if (!user.active) {
-            throw BadCredentialsException("User account is disabled")
-        }
-
+        if (!user.active) throw BadCredentialsException("User account is disabled")
         if (!passwordEncoder.matches(request.password, user.passwordHash)) {
             throw BadCredentialsException("Invalid credentials")
         }
 
+        // Return token WITHOUT cid; frontend must call /api/companies/mine then /api/companies/select
         return toAuthDto(user)
     }
 
-    /**
-     * Refresh tokens using a valid, non-revoked refresh token.
-     */
     @Transactional(readOnly = true)
     fun refreshTokens(request: RefreshTokenRequest): AuthDto {
-        // Check blacklist first
         if (revokedTokenRepository.existsById(request.refreshToken)) {
             throw BadCredentialsException("Refresh token has been revoked")
         }
@@ -121,10 +119,9 @@ class AuthService(
         val user = userRepository.findById(userId)
             .orElseThrow { BadCredentialsException("User not found") }
 
-        if (!user.active) {
-            throw BadCredentialsException("User account is disabled")
-        }
+        if (!user.active) throw BadCredentialsException("User account is disabled")
 
+        // Still returns token WITHOUT cid; selection is per-access-token via /api/companies/select
         return toAuthDto(user)
     }
 
@@ -137,9 +134,8 @@ class AuthService(
         val principal = requireCurrentUser()
 
         val user = userRepository.findById(principal.userId)
-            .orElseThrow { org.springframework.security.authentication.BadCredentialsException("Invalid credentials") }
+            .orElseThrow { BadCredentialsException("Invalid credentials") }
 
-        // Safety check: should always be true, but we assert to prevent cross-tenant weirdness.
         if (user.tenantId != principal.tenantId) {
             throw BadCredentialsException("Cross-tenant access denied")
         }
@@ -149,8 +145,11 @@ class AuthService(
             tenantId = user.tenantId,
             email = user.email,
             fullName = user.fullName,
-            roles = user.roles.map { it.name }.sorted()
+            roles = user.roles.map { it.name }.sorted(),
+            companyId = principal.companyId,
+            companySelected = principal.companyId != null
         )
+
     }
 
     // ==========
@@ -170,7 +169,6 @@ class AuthService(
                 )
             }
         } catch (ex: Exception) {
-            // Logout should be idempotent; just log and move on
             log.warn("Failed to process logout request", ex)
         }
     }
@@ -202,10 +200,6 @@ class AuthService(
     // Forgot / Reset password (public)
     // ==========
 
-    /**
-     * Generate a password reset token for the given email + tenant.
-     * Eventually send an email; here we just persist the token and log it for dev.
-     */
     @Transactional
     fun forgotPassword(request: ForgotPasswordRequest) {
         val tenantSlug = request.tenantSlug.trim().lowercase()
@@ -214,7 +208,7 @@ class AuthService(
         val tenant = tenantRepository.findBySlug(tenantSlug)
             ?: run {
                 log.info("Forgot password for unknown tenant: {}", tenantSlug)
-                return // do not leak which tenants / users exist
+                return
             }
 
         val user = userRepository.findByTenantIdAndEmail(tenant.id, email)
@@ -224,7 +218,6 @@ class AuthService(
             }
 
         if (!user.active) {
-            // treat as no-op, we don't reveal anything
             log.info("Forgot password invoked for inactive user {} in tenant {}", email, tenant.slug)
             return
         }
@@ -233,14 +226,11 @@ class AuthService(
             token = UUID.randomUUID().toString().replace("-", ""),
             userId = user.id,
             tenantId = tenant.id,
-            expiresAt = Instant.now().plusSeconds(60 * 60), // 1 hour
+            expiresAt = Instant.now().plusSeconds(60 * 60),
             used = false
         )
 
         passwordResetTokenRepository.save(token)
-
-        // In production: send this token in an email link.
-        // For dev: log it so you can grab it for testing.
         log.warn("Password reset token for {} (tenant {}): {}", user.email, tenant.slug, token.token)
     }
 
@@ -256,9 +246,7 @@ class AuthService(
         val user = userRepository.findById(token.userId)
             .orElseThrow { IllegalStateException("User not found for reset token") }
 
-        if (!user.active) {
-            throw BadCredentialsException("User account is disabled")
-        }
+        if (!user.active) throw BadCredentialsException("User account is disabled")
 
         user.passwordHash = passwordEncoder.encode(request.newPassword)
         userRepository.save(user)

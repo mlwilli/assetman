@@ -48,6 +48,7 @@ dependencies {
     testImplementation("org.testcontainers:junit-jupiter:1.20.2")
     testImplementation("org.mockito:mockito-core")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
+    testImplementation("org.testcontainers:jdbc:1.20.2")
 
 
     runtimeOnly("com.h2database:h2")

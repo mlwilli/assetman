@@ -1,0 +1,184 @@
+cd D:\Users\homem\IdeaProjects\assetman\assetman-frontend
+
+# Capture file
+$Out = "ASSETMAN-FE-CAPTURE.txt"
+Remove-Item $Out -Force -ErrorAction SilentlyContinue
+
+function DumpFile($path) {
+  Add-Content $Out "`n`n===== FILE: $path =====`n"
+  if (Test-Path $path) {
+    Get-Content $path | Add-Content $Out
+  } else {
+    Add-Content $Out "<missing>"
+  }
+}
+
+function DumpSearch($title, $root, $pattern) {
+  Add-Content $Out "`n`n===== SEARCH: $title =====`nROOT: $root`nPATTERN: $pattern`n"
+  $matches =
+    Get-ChildItem $root -Recurse -File -Include *.ts,*.html,*.scss,*.json,*.mjs,*.cjs,*.js |
+      Select-String -Pattern $pattern |
+      ForEach-Object {
+        $rel = $_.Path.Replace((Get-Location).Path + "\", "")
+        "{0}:{1}: {2}" -f $rel, $_.LineNumber, $_.Line.TrimEnd()
+      }
+
+  if ($matches) { $matches | Add-Content $Out } else { Add-Content $Out "<no matches>" }
+}
+
+# ---------------------------------------------------------
+# Tooling + build/test configuration
+# ---------------------------------------------------------
+DumpFile .\package.json
+DumpFile .\package-lock.json
+DumpFile .\angular.json
+DumpFile .\tsconfig.json
+DumpFile .\tsconfig.app.json
+DumpFile .\tsconfig.spec.json
+DumpFile .\vite.config.ts
+DumpFile .\vitest.config.ts
+DumpFile .\src\test-setup.ts
+
+DumpSearch "Scripts + build configs" .\ "ng build|ng serve|vitest|vite|configuration|development|production|defaultConfiguration|fileReplacements|proxyConfig"
+
+# ---------------------------------------------------------
+# App bootstrap, routing, DI config, environments
+# ---------------------------------------------------------
+DumpFile .\src\main.ts
+DumpFile .\src\index.html
+DumpFile .\src\styles.scss
+DumpFile .\src\app\app.config.ts
+DumpFile .\src\app\app.routes.ts
+DumpFile .\src\app\app.ts
+DumpFile .\src\app\app.html
+DumpFile .\src\app\app.scss
+
+DumpFile .\src\environments\environment.ts
+DumpFile .\src\environments\environment.development.ts
+DumpFile .\src\environments\environment.production.ts
+
+DumpSearch "Routes + guards" .\src\app "Routes|canActivate|CanActivateFn|canMatch|CanMatchFn|authGuard|roleGuard|forbidden|login|dashboard"
+
+# ---------------------------------------------------------
+# Auth, tokens, session resolution, interceptors
+# ---------------------------------------------------------
+DumpFile .\src\app\core\auth\auth.api.ts
+DumpFile .\src\app\core\auth\auth.models.ts
+DumpFile .\src\app\core\auth\auth.service.ts
+DumpFile .\src\app\core\auth\token.storage.ts
+DumpFile .\src\app\core\auth\auth.guard.ts
+DumpFile .\src\app\core\auth\role.guard.ts
+
+DumpFile .\src\app\core\http\auth.interceptor.ts
+DumpFile .\src\app\core\http\refresh.interceptor.ts
+DumpFile .\src\app\core\http\error.interceptor.ts
+DumpFile .\src\app\core\http\api-error.model.ts
+DumpFile .\src\app\core\ui\notification.service.ts
+
+DumpSearch "Interceptor pipeline + bypass rules" .\src\app "withInterceptors|HttpInterceptorFn|X-Skip-Auth|bypass|refreshInFlight|shareReplay|Authorization|Bearer|/api/auth/refresh|/api/auth/login|/api/me"
+DumpSearch "Session init / ensureSessionOnce usage" .\src\app "ensureSessionOnce|provideAppInitializer|firstValueFrom|me\(\)|/api/me"
+
+# ---------------------------------------------------------
+# Domain APIs + models used by pickers and pages
+# ---------------------------------------------------------
+DumpFile .\src\app\core\assets\asset.api.ts
+DumpFile .\src\app\core\assets\asset.models.ts
+DumpFile .\src\app\core\locations\location.api.ts
+DumpFile .\src\app\core\locations\location.models.ts
+DumpFile .\src\app\core\properties\property.api.ts
+DumpFile .\src\app\core\properties\property.models.ts
+DumpFile .\src\app\core\units\unit.api.ts
+DumpFile .\src\app\core\units\unit.models.ts
+DumpFile .\src\app\core\users\user.api.ts
+DumpFile .\src\app\core\users\user.models.ts
+
+DumpSearch "Backend endpoint usage" .\src\app "/api/assets|/api/locations|/api/locations/tree|/api/properties|/api/units|/api/users|environment\.apiBaseUrl"
+
+# ---------------------------------------------------------
+# Shared components: pickers + location tree
+# ---------------------------------------------------------
+DumpFile .\src\app\shared\location-tree\location-tree.ts
+DumpFile .\src\app\shared\location-tree\location-tree.html
+DumpFile .\src\app\shared\location-tree\location-tree.scss
+DumpFile .\src\app\shared\location-picker\location-picker.ts
+DumpFile .\src\app\shared\location-picker\location-picker.html
+DumpFile .\src\app\shared\location-picker\location-picker.scss
+
+DumpFile .\src\app\shared\property-picker\property-picker.ts
+DumpFile .\src\app\shared\property-picker\property-picker.html
+DumpFile .\src\app\shared\property-picker\property-picker.scss
+DumpFile .\src\app\shared\unit-picker\unit-picker.ts
+DumpFile .\src\app\shared\unit-picker\unit-picker.html
+DumpFile .\src\app\shared\unit-picker\unit-picker.scss
+DumpFile .\src\app\shared\user-picker\user-picker.ts
+DumpFile .\src\app\shared\user-picker\user-picker.html
+DumpFile .\src\app\shared\user-picker\user-picker.scss
+
+DumpSearch "Picker behavior" .\src\app "debounceTime|FormControl|MatAutocomplete|pick\(|selectedIdChange|@Input|@Output|disabled|enable\(|disable\("
+DumpSearch "Location tree behavior" .\src\app "MatTree|NestedTreeControl|MatTreeNestedDataSource|toggle\(|onNodeClick|mode.*navigate|mode.*select|selected"
+
+# ---------------------------------------------------------
+# Feature pages + layout shell
+# ---------------------------------------------------------
+DumpFile .\src\app\layout\app-shell\app-shell.ts
+DumpFile .\src\app\layout\app-shell\app-shell.html
+DumpFile .\src\app\layout\app-shell\app-shell.scss
+
+DumpFile .\src\app\pages\login\login.ts
+DumpFile .\src\app\pages\login\login.html
+DumpFile .\src\app\pages\login\login.scss
+
+DumpFile .\src\app\pages\assets\assets.ts
+DumpFile .\src\app\pages\assets\assets.html
+DumpFile .\src\app\pages\assets\assets.scss
+DumpFile .\src\app\pages\assets\asset-detail.ts
+DumpFile .\src\app\pages\assets\asset-detail.html
+DumpFile .\src\app\pages\assets\asset-detail.scss
+DumpFile .\src\app\pages\assets\asset-form.ts
+DumpFile .\src\app\pages\assets\asset-form.html
+DumpFile .\src\app\pages\assets\asset-form.scss
+
+DumpFile .\src\app\pages\locations\locations.ts
+DumpFile .\src\app\pages\locations\locations.html
+DumpFile .\src\app\pages\locations\locations.scss
+DumpFile .\src\app\pages\locations\location-detail.ts
+DumpFile .\src\app\pages\locations\location-detail.html
+DumpFile .\src\app\pages\locations\location-detail.scss
+DumpFile .\src\app\pages\locations\location-form.ts
+DumpFile .\src\app\pages\locations\location-form.html
+DumpFile .\src\app\pages\locations\location-form.scss
+
+DumpFile .\src\app\pages\dashboard\dashboard.ts
+DumpFile .\src\app\pages\dashboard\dashboard.html
+DumpFile .\src\app\pages\dashboard\dashboard.scss
+DumpFile .\src\app\pages\forbidden\forbidden.ts
+DumpFile .\src\app\pages\forbidden\forbidden.html
+DumpFile .\src\app\pages\forbidden\forbidden.scss
+
+DumpSearch "Role-based UI gating" .\src\app "canManage|roles|OWNER|ADMIN|MANAGER|forbidden|navigateByUrl\('/forbidden'\)"
+
+# ---------------------------------------------------------
+# Tests (only when needed to debug/fix behavior)
+# ---------------------------------------------------------
+DumpFile .\src\app\core\http\refresh.interceptor.spec.ts
+DumpFile .\src\app\core\http\error.interceptor.spec.ts
+DumpFile .\src\app\core\auth\role.guard.spec.ts
+DumpFile .\src\app\pages\assets\assets.spec.ts
+DumpFile .\src\app\pages\assets\asset-form.spec.ts
+DumpFile .\src\app\pages\assets\asset-detail.spec.ts
+DumpFile .\src\app\pages\locations\locations.spec.ts
+DumpFile .\src\app\pages\locations\location-form.spec.ts
+DumpFile .\src\app\pages\locations\location-detail.spec.ts
+DumpFile .\src\app\pages\login\login.spec.ts
+DumpFile .\src\app\layout\app-shell\app-shell.spec.ts
+
+DumpSearch "HTTP test patterns" .\src "HttpTestingController|provideHttpClientTesting|expectOne|match\(|flush\(|verify\(|advanceTimersByTime|fakeAsync|tick"
+
+# ---------------------------------------------------------
+# Minimal project file list snapshot
+# ---------------------------------------------------------
+Add-Content $Out "`n`n===== FILE LIST: src (TS/HTML/SCSS/JSON) =====`n"
+Get-ChildItem .\src -Recurse -File -Include *.ts,*.html,*.scss,*.json |
+  ForEach-Object { $_.FullName.Replace((Get-Location).Path + "\", "") } |
+  Sort-Object |
+  Add-Content $Out

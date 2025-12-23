@@ -1,0 +1,24 @@
+﻿spring:
+  datasource:
+    url: jdbc:h2:file:./build/h2/assetman-local;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+    clean-disabled: false
+    clean-on-validation-error: true
+    baseline-on-migrate: true
+
+
+assetman:
+  security:
+    jwt:
+      secret: "LOCAL-DEV-ONLY-CHANGE-ME-TO-32+CHARS-MINIMUM"
+      access-token-validity-seconds: 900
+      refresh-token-validity-seconds: 1209600

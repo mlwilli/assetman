@@ -51,14 +51,24 @@ class JsonAccessDeniedHandler(
         response: HttpServletResponse,
         accessDeniedException: AccessDeniedException
     ) {
-        response.status = HttpStatus.FORBIDDEN.value()
+        val (status, message) =
+            if (accessDeniedException is CompanySelectionRequiredException) {
+                HttpStatus.CONFLICT to accessDeniedException.message
+            } else {
+                HttpStatus.FORBIDDEN to "Forbidden"
+            }
+
+        response.status = status.value()
         response.contentType = "application/json"
+
         val body = ApiErrorResponse(
-            status = HttpStatus.FORBIDDEN.value(),
-            error = HttpStatus.FORBIDDEN.reasonPhrase,
-            message = "Forbidden",
+            status = status.value(),
+            error = status.reasonPhrase,
+            message = message,
             path = request.requestURI
         )
+
         response.writer.write(objectMapper.writeValueAsString(body))
     }
 }
+

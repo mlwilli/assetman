@@ -58,3 +58,4 @@ class UserDirectoryService(
         return user.toDirectoryDto()
     }
 }
+

@@ -2,8 +2,6 @@ package com.github.mlwilli.assetman.identity.service
 
 import com.github.mlwilli.assetman.common.error.ConflictException
 import com.github.mlwilli.assetman.common.error.NotFoundException
-import com.github.mlwilli.assetman.common.security.AuthenticatedUser
-import com.github.mlwilli.assetman.common.security.TenantContext
 import com.github.mlwilli.assetman.identity.domain.Role
 import com.github.mlwilli.assetman.identity.domain.User
 import com.github.mlwilli.assetman.identity.repo.UserRepository
@@ -11,19 +9,18 @@ import com.github.mlwilli.assetman.identity.web.CreateUserRequest
 import com.github.mlwilli.assetman.identity.web.UpdateUserRolesRequest
 import com.github.mlwilli.assetman.identity.web.UpdateUserStatusRequest
 import com.github.mlwilli.assetman.testsupport.pageOf
-import org.junit.jupiter.api.AfterEach
+import com.github.mlwilli.assetman.testsupport.withTenantContext
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
-import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
 import org.springframework.security.crypto.password.PasswordEncoder
 import java.util.UUID
 
 class AdminUserServiceTest {
-    // test mctestface
+
     private lateinit var userRepository: UserRepository
     private lateinit var passwordEncoder: PasswordEncoder
     private lateinit var service: AdminUserService
@@ -36,25 +33,15 @@ class AdminUserServiceTest {
         userRepository = Mockito.mock(UserRepository::class.java)
         passwordEncoder = Mockito.mock(PasswordEncoder::class.java)
         service = AdminUserService(userRepository, passwordEncoder)
-
-        // Simulate authenticated OWNER/ADMIN in the current tenant
-        TenantContext.set(
-            AuthenticatedUser(
-                userId = adminUserId,
-                tenantId = tenantId,
-                email = "admin@tenant.test",
-                roles = setOf("OWNER", "ADMIN")
-            )
-        )
-    }
-
-    @AfterEach
-    fun tearDown() {
-        TenantContext.clear()
     }
 
     @Test
-    fun `listUsers returns active users first, then sorted by email`() {
+    fun `listUsers returns active users first, then sorted by email`() = withTenantContext(
+        userId = adminUserId,
+        tenantId = tenantId,
+        email = "admin@tenant.test",
+        roles = setOf("OWNER", "ADMIN")
+    ) {
         // given
         val inactiveUser = User(
             tenantId = tenantId,
@@ -110,7 +97,12 @@ class AdminUserServiceTest {
     }
 
     @Test
-    fun `createUser creates user in current tenant and returns dto`() {
+    fun `createUser creates user in current tenant and returns dto`() = withTenantContext(
+        userId = adminUserId,
+        tenantId = tenantId,
+        email = "admin@tenant.test",
+        roles = setOf("OWNER", "ADMIN")
+    ) {
         // given
         val request = CreateUserRequest(
             email = "new.user@tenant.test",
@@ -153,7 +145,12 @@ class AdminUserServiceTest {
     }
 
     @Test
-    fun `createUser throws ConflictException when email already exists in tenant`() {
+    fun `createUser throws ConflictException when email already exists in tenant`(): Unit = withTenantContext(
+        userId = adminUserId,
+        tenantId = tenantId,
+        email = "admin@tenant.test",
+        roles = setOf("OWNER", "ADMIN")
+    ) {
         // given
         val request = CreateUserRequest(
             email = "existing@tenant.test",
@@ -183,7 +180,12 @@ class AdminUserServiceTest {
     }
 
     @Test
-    fun `updateRoles updates roles for user in current tenant`() {
+    fun `updateRoles updates roles for user in current tenant`() = withTenantContext(
+        userId = adminUserId,
+        tenantId = tenantId,
+        email = "admin@tenant.test",
+        roles = setOf("OWNER", "ADMIN")
+    ) {
         // given
         val userId = UUID.randomUUID()
 
@@ -221,7 +223,12 @@ class AdminUserServiceTest {
     }
 
     @Test
-    fun `updateRoles throws NotFoundException when user is not in tenant`() {
+    fun `updateRoles throws NotFoundException when user is not in tenant`(): Unit = withTenantContext(
+        userId = adminUserId,
+        tenantId = tenantId,
+        email = "admin@tenant.test",
+        roles = setOf("OWNER", "ADMIN")
+    ) {
         val userId = UUID.randomUUID()
 
         Mockito.`when`(
@@ -238,7 +245,12 @@ class AdminUserServiceTest {
     }
 
     @Test
-    fun `updateStatus updates active flag for user in current tenant`() {
+    fun `updateStatus updates active flag for user in current tenant`() = withTenantContext(
+        userId = adminUserId,
+        tenantId = tenantId,
+        email = "admin@tenant.test",
+        roles = setOf("OWNER", "ADMIN")
+    ) {
         // given
         val userId = UUID.randomUUID()
 
@@ -272,7 +284,12 @@ class AdminUserServiceTest {
     }
 
     @Test
-    fun `updateStatus throws NotFoundException when user is not in tenant`() {
+    fun `updateStatus throws NotFoundException when user is not in tenant`(): Unit = withTenantContext(
+        userId = adminUserId,
+        tenantId = tenantId,
+        email = "admin@tenant.test",
+        roles = setOf("OWNER", "ADMIN")
+    ) {
         val userId = UUID.randomUUID()
 
         Mockito.`when`(

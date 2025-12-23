@@ -28,8 +28,9 @@ class UserDirectoryController(
     ): List<UserDirectoryDto> =
         service.listDirectory(search, limit, activeOnly)
 
-    @GetMapping("/{id}")
+    @GetMapping("/{userId}")
     @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','TECHNICIAN')")
-    fun getUser(@PathVariable id: UUID): UserDirectoryDto =
-        service.getUser(id)
+    fun getUser(@PathVariable userId: UUID): UserDirectoryDto =
+        service.getUser(userId)
+
 }

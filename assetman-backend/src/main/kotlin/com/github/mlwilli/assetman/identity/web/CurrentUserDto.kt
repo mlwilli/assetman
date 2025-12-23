@@ -7,5 +7,7 @@ data class CurrentUserDto(
     val tenantId: UUID,
     val email: String,
     val fullName: String,
-    val roles: List<String>
+    val roles: List<String>,
+    val companyId: UUID?,
+    val companySelected: Boolean
 )
