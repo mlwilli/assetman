@@ -3,6 +3,9 @@ package com.github.mlwilli.assetman.property.service
 import com.github.mlwilli.assetman.common.error.NotFoundException
 import com.github.mlwilli.assetman.common.security.TenantContext
 import com.github.mlwilli.assetman.common.security.currentTenantId
+import com.github.mlwilli.assetman.common.web.PagingLimits
+import com.github.mlwilli.assetman.common.web.firstPage
+import org.springframework.data.domain.Sort
 import com.github.mlwilli.assetman.property.domain.Unit
 import com.github.mlwilli.assetman.property.domain.UnitStatus
 import com.github.mlwilli.assetman.property.repo.PropertyRepository
@@ -23,20 +26,21 @@ class UnitService(
 ) {
 
     @Transactional(readOnly = true)
-    fun listUnits(
-        propertyId: UUID?,
-        status: UnitStatus?,
-        search: String?
-    ): List<UnitDto> {
-        val ctx = TenantContext.get() ?: error("No authenticated user in context")
+    fun listUnits(propertyId: UUID?, status: UnitStatus?, search: String?, limit: Int): List<UnitDto> {
+        val tenantId = currentTenantId()
 
-        return unitRepository.search(
-            tenantId = ctx.tenantId,
-            propertyId = propertyId,
-            status = status,
-            search = search
-        ).map { it.toDto() }
+        val pageable = firstPage(
+            limit = limit,
+            defaultLimit = PagingLimits.DEFAULT_LIST_LIMIT,
+            maxLimit = PagingLimits.MAX_LIST_LIMIT,
+            sort = Sort.by("name").ascending()
+        )
+
+        return unitRepository.searchPage(tenantId, propertyId, status, search, pageable)
+            .content
+            .map { it.toDto() }
     }
+
 
     @Transactional(readOnly = true)
     fun getUnit(id: UUID): UnitDto {

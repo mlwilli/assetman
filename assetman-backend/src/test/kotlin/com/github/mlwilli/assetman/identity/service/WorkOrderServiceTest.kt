@@ -3,6 +3,7 @@ package com.github.mlwilli.assetman.identity.service
 import com.github.mlwilli.assetman.common.error.NotFoundException
 import com.github.mlwilli.assetman.common.security.AuthenticatedUser
 import com.github.mlwilli.assetman.common.security.TenantContext
+import com.github.mlwilli.assetman.testsupport.setBaseEntityFields
 import com.github.mlwilli.assetman.workorder.domain.*
 import com.github.mlwilli.assetman.workorder.repo.WorkOrderRepository
 import com.github.mlwilli.assetman.workorder.service.WorkOrderService
@@ -78,7 +79,7 @@ class WorkOrderServiceTest {
             externalTicketRef = null,
             notes = "Shut off main valve first"
         )
-        setBaseFields(wo1, UUID.randomUUID())
+        setBaseEntityFields(wo1, UUID.randomUUID())
 
         val wo2 = WorkOrder(
             tenantId = tenantId,
@@ -104,7 +105,7 @@ class WorkOrderServiceTest {
             externalTicketRef = "EXT-1",
             notes = null
         )
-        setBaseFields(wo2, UUID.randomUUID())
+        setBaseEntityFields(wo2, UUID.randomUUID())
 
         Mockito.`when`(
             workOrderRepository.search(
@@ -171,7 +172,7 @@ class WorkOrderServiceTest {
             externalTicketRef = null,
             notes = null
         )
-        setBaseFields(wo, id)
+        setBaseEntityFields(wo, id)
 
         Mockito.`when`(
             workOrderRepository.findByIdAndTenantId(id, tenantId)
@@ -247,7 +248,7 @@ class WorkOrderServiceTest {
             externalTicketRef = request.externalTicketRef,
             notes = request.notes
         )
-        setBaseFields(saved, UUID.randomUUID())
+        setBaseEntityFields(saved, UUID.randomUUID())
 
         Mockito.`when`(
             workOrderRepository.save(ArgumentMatchers.any(WorkOrder::class.java))
@@ -303,7 +304,7 @@ class WorkOrderServiceTest {
             externalTicketRef = null,
             notes = null
         )
-        setBaseFields(existing, id)
+        setBaseEntityFields(existing, id)
 
         Mockito.`when`(
             workOrderRepository.findByIdAndTenantId(id, tenantId)
@@ -420,7 +421,7 @@ class WorkOrderServiceTest {
             externalTicketRef = null,
             notes = null
         )
-        setBaseFields(existing, id)
+        setBaseEntityFields(existing, id)
 
         Mockito.`when`(
             workOrderRepository.findByIdAndTenantId(id, tenantId)
@@ -465,7 +466,7 @@ class WorkOrderServiceTest {
             externalTicketRef = null,
             notes = null
         )
-        setBaseFields(existing, id)
+        setBaseEntityFields(existing, id)
 
         Mockito.`when`(
             workOrderRepository.findByIdAndTenantId(id, tenantId)
@@ -527,7 +528,7 @@ class WorkOrderServiceTest {
             externalTicketRef = null,
             notes = null
         )
-        setBaseFields(existing, id)
+        setBaseEntityFields(existing, id)
 
         Mockito.`when`(
             workOrderRepository.findByIdAndTenantId(id, tenantId)
@@ -548,36 +549,13 @@ class WorkOrderServiceTest {
 
         service.deleteWorkOrder(id)
 
-        Mockito.verify(workOrderRepository, Mockito.never()).delete(ArgumentMatchers.any())
+        Mockito.verify(workOrderRepository, Mockito.never())
+            .delete(ArgumentMatchers.any(WorkOrder::class.java))
+
     }
 
     // ---------------------------------------------------------------------
     // Helper to set BaseEntity fields
     // ---------------------------------------------------------------------
 
-    private fun setBaseFields(entity: Any, id: UUID) {
-        var clazz: Class<*>? = entity.javaClass
-
-        while (clazz != null) {
-            try {
-                val idField = clazz.getDeclaredField("id")
-                idField.isAccessible = true
-                idField.set(entity, id)
-
-                val createdField = clazz.getDeclaredField("createdAt")
-                createdField.isAccessible = true
-                createdField.set(entity, Instant.now())
-
-                val updatedField = clazz.getDeclaredField("updatedAt")
-                updatedField.isAccessible = true
-                updatedField.set(entity, Instant.now())
-                return
-            } catch (ignored: NoSuchFieldException) {
-                // keep walking up
-            }
-            clazz = clazz.superclass
-        }
-
-        error("id / createdAt / updatedAt not found in class hierarchy of ${entity.javaClass}")
-    }
 }

@@ -4,6 +4,9 @@ import com.github.mlwilli.assetman.common.error.ConflictException
 import com.github.mlwilli.assetman.common.error.NotFoundException
 import com.github.mlwilli.assetman.common.security.TenantContext
 import com.github.mlwilli.assetman.common.security.currentTenantId
+import com.github.mlwilli.assetman.common.web.PagingLimits
+import com.github.mlwilli.assetman.common.web.firstPage
+import org.springframework.data.domain.Sort
 import com.github.mlwilli.assetman.property.domain.Property
 import com.github.mlwilli.assetman.property.domain.PropertyType
 import com.github.mlwilli.assetman.property.repo.PropertyRepository
@@ -24,18 +27,21 @@ class PropertyService(
 ) {
 
     @Transactional(readOnly = true)
-    fun listProperties(
-        type: PropertyType?,
-        search: String?
-    ): List<PropertyDto> {
-        val ctx = TenantContext.get() ?: error("No authenticated user in context")
+    fun listProperties(type: PropertyType?, search: String?, limit: Int): List<PropertyDto> {
+        val tenantId = currentTenantId()
 
-        return propertyRepository.search(
-            tenantId = ctx.tenantId,
-            type = type,
-            search = search
-        ).map { it.toDto() }
+        val pageable = firstPage(
+            limit = limit,
+            defaultLimit = PagingLimits.DEFAULT_LIST_LIMIT,
+            maxLimit = PagingLimits.MAX_LIST_LIMIT,
+            sort = Sort.by("name").ascending()
+        )
+
+        return propertyRepository.searchPage(tenantId, type, search, pageable)
+            .content
+            .map { it.toDto() }
     }
+
 
     @Transactional(readOnly = true)
     fun getProperty(id: UUID): PropertyDto {

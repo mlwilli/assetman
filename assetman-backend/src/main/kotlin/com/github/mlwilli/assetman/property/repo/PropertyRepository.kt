@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.util.UUID
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 
 interface PropertyRepository : JpaRepository<Property, UUID> {
 
@@ -26,4 +28,23 @@ interface PropertyRepository : JpaRepository<Property, UUID> {
         @Param("type") type: PropertyType?,
         @Param("search") search: String?
     ): List<Property>
+
+
+    @Query(
+        """
+  SELECT p
+  FROM Property p
+  WHERE p.tenantId = :tenantId
+    AND (:type IS NULL OR p.type = :type)
+    AND (:search IS NULL OR lower(p.name) LIKE lower(concat('%', :search, '%')))
+  ORDER BY p.name ASC
+  """
+    )
+    fun searchPage(
+        @Param("tenantId") tenantId: UUID,
+        @Param("type") type: PropertyType?,
+        @Param("search") search: String?,
+        pageable: Pageable
+    ): Page<Property>
+
 }

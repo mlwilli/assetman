@@ -6,6 +6,7 @@ import com.github.mlwilli.assetman.common.security.TenantContext
 import com.github.mlwilli.assetman.identity.domain.*
 import com.github.mlwilli.assetman.identity.repo.*
 import com.github.mlwilli.assetman.identity.web.*
+import com.github.mlwilli.assetman.testsupport.setBaseEntityFields
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.assertThrows
@@ -75,7 +76,7 @@ class AuthServiceTest {
             name = request.tenantName.trim(),
             slug = request.tenantSlug.trim().lowercase()
         )
-        setBaseFields(tenant, tenantId)
+        setBaseEntityFields(tenant, tenantId)
 
         val user = User(
             tenantId = tenantId,
@@ -84,7 +85,7 @@ class AuthServiceTest {
             passwordHash = "hashed",
             roles = setOf(Role.OWNER, Role.ADMIN)
         )
-        setBaseFields(user, userId)
+        setBaseEntityFields(user, userId)
 
         Mockito.`when`(
             tenantRepository.save(any())
@@ -130,7 +131,7 @@ class AuthServiceTest {
         )
 
         val tenant = Tenant(name = "Acme", slug = "acme")
-        setBaseFields(tenant, tenantId)
+        setBaseEntityFields(tenant, tenantId)
 
         val user = User(
             tenantId = tenantId,
@@ -139,7 +140,7 @@ class AuthServiceTest {
             passwordHash = "hashed",
             roles = setOf(Role.USER)
         )
-        setBaseFields(user, userId)
+        setBaseEntityFields(user, userId)
 
         Mockito.`when`(tenantRepository.findBySlug(eq("acme"))).thenReturn(tenant)
         Mockito.`when`(userRepository.findByTenantIdAndEmail(eq(tenantId), eq("user@acme.test"))).thenReturn(user)
@@ -171,7 +172,7 @@ class AuthServiceTest {
         )
 
         val tenant = Tenant(name = "Acme", slug = "acme")
-        setBaseFields(tenant, tenantId)
+        setBaseEntityFields(tenant, tenantId)
 
         val user = User(
             tenantId = tenantId,
@@ -180,7 +181,7 @@ class AuthServiceTest {
             passwordHash = "hashed",
             roles = setOf(Role.USER)
         )
-        setBaseFields(user, userId)
+        setBaseEntityFields(user, userId)
 
         Mockito.`when`(tenantRepository.findBySlug(eq("acme"))).thenReturn(tenant)
         Mockito.`when`(userRepository.findByTenantIdAndEmail(eq(tenantId), eq("user@acme.test"))).thenReturn(user)
@@ -210,7 +211,7 @@ class AuthServiceTest {
             passwordHash = "hashed",
             roles = setOf(Role.USER)
         )
-        setBaseFields(user, userId)
+        setBaseEntityFields(user, userId)
 
         Mockito.`when`(userRepository.findById(eq(userId))).thenReturn(java.util.Optional.of(user))
 
@@ -246,7 +247,7 @@ class AuthServiceTest {
             passwordHash = "hashed",
             roles = setOf(Role.ADMIN)
         )
-        setBaseFields(user, userId)
+        setBaseEntityFields(user, userId)
 
         Mockito.`when`(userRepository.findById(eq(userId))).thenReturn(java.util.Optional.of(user))
 
@@ -280,7 +281,7 @@ class AuthServiceTest {
             passwordHash = "old-hash",
             roles = setOf(Role.USER)
         )
-        setBaseFields(user, userId)
+        setBaseEntityFields(user, userId)
 
         Mockito.`when`(userRepository.findById(eq(userId))).thenReturn(java.util.Optional.of(user))
         Mockito.`when`(passwordEncoder.matches(eq("old"), eq("old-hash"))).thenReturn(true)
@@ -313,7 +314,7 @@ class AuthServiceTest {
     @Test
     fun `forgotPassword with valid tenant and user saves reset token`() {
         val tenant = Tenant(name = "Acme", slug = "acme")
-        setBaseFields(tenant, tenantId)
+        setBaseEntityFields(tenant, tenantId)
 
         val user = User(
             tenantId = tenantId,
@@ -322,7 +323,7 @@ class AuthServiceTest {
             passwordHash = "hash",
             roles = setOf(Role.USER)
         )
-        setBaseFields(user, userId)
+        setBaseEntityFields(user, userId)
 
         Mockito.`when`(tenantRepository.findBySlug(eq("acme"))).thenReturn(tenant)
         Mockito.`when`(userRepository.findByTenantIdAndEmail(eq(tenantId), eq("user@acme.test"))).thenReturn(user)
@@ -364,7 +365,7 @@ class AuthServiceTest {
             passwordHash = "old",
             roles = setOf(Role.USER)
         )
-        setBaseFields(user, userId)
+        setBaseEntityFields(user, userId)
 
         Mockito.`when`(passwordResetTokenRepository.findById(eq(tokenId)))
             .thenReturn(java.util.Optional.of(token))
@@ -393,31 +394,7 @@ class AuthServiceTest {
     // helpers
     // --------------------------------------------------------------------
 
-    private fun setBaseFields(entity: Any, id: UUID) {
-        var clazz: Class<*>? = entity.javaClass
 
-        while (clazz != null) {
-            try {
-                val idField = clazz.getDeclaredField("id")
-                idField.isAccessible = true
-                idField.set(entity, id)
-
-                val createdField = clazz.getDeclaredField("createdAt")
-                createdField.isAccessible = true
-                createdField.set(entity, Instant.now())
-
-                val updatedField = clazz.getDeclaredField("updatedAt")
-                updatedField.isAccessible = true
-                updatedField.set(entity, Instant.now())
-                return
-            } catch (ignored: NoSuchFieldException) {
-                // keep walking up
-            }
-            clazz = clazz.superclass
-        }
-
-        error("id / createdAt / updatedAt not found in class hierarchy of ${entity.javaClass}")
-    }
 
 
 

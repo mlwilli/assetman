@@ -15,6 +15,7 @@ import com.github.mlwilli.assetman.location.domain.LocationType
 import com.github.mlwilli.assetman.location.repo.LocationRepository
 import com.github.mlwilli.assetman.property.repo.PropertyRepository
 import com.github.mlwilli.assetman.property.repo.UnitRepository
+import com.github.mlwilli.assetman.testsupport.pageOf
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -27,6 +28,7 @@ import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
+import com.github.mlwilli.assetman.testsupport.setBaseEntityFields
 
 class AssetServiceTest {
 
@@ -136,7 +138,7 @@ class AssetServiceTest {
             externalRef = request.externalRef,
             customFieldsJson = request.customFieldsJson
         )
-        setBaseFields(saved, UUID.randomUUID())
+        setBaseEntityFields(saved, UUID.randomUUID())
 
         Mockito.`when`(assetRepository.save(Mockito.any(Asset::class.java))).thenReturn(saved)
 
@@ -166,7 +168,7 @@ class AssetServiceTest {
         ).apply {
             category = "IT"
             serialNumber = "SN-SW"
-            setBaseFields(this, id)
+            setBaseEntityFields(this, id)
         }
 
         Mockito.`when`(assetRepository.findByIdAndTenantId(id, tenantId)).thenReturn(asset)
@@ -202,10 +204,11 @@ class AssetServiceTest {
             status = AssetStatus.IN_SERVICE
         ).apply {
             category = "IT"
-            setBaseFields(this, UUID.randomUUID())
+            setBaseEntityFields(this, UUID.randomUUID())
         }
 
-        val page = PageImpl(listOf(asset), pageable, 1)
+        val page = pageOf(asset)
+
 
         Mockito.`when`(
             assetRepository.search(
@@ -256,7 +259,7 @@ class AssetServiceTest {
             type = LocationType.SITE
         ).apply {
             path = "/$rootId"
-            setBaseFields(this, rootId)
+            setBaseEntityFields(this, rootId)
         }
 
         val childLocation = Location(
@@ -266,7 +269,7 @@ class AssetServiceTest {
             parentId = rootId,
             path = "/$rootId/$childId"
         ).apply {
-            setBaseFields(this, childId)
+            setBaseEntityFields(this, childId)
         }
 
         Mockito.`when`(locationRepository.findByIdAndTenantId(rootId, tenantId)).thenReturn(rootLocation)
@@ -287,10 +290,10 @@ class AssetServiceTest {
             status = AssetStatus.IN_SERVICE
         ).apply {
             locationId = childId
-            setBaseFields(this, UUID.randomUUID())
+            setBaseEntityFields(this, UUID.randomUUID())
         }
 
-        val page = PageImpl(listOf(asset), pageable, 1)
+        val page = pageOf(asset)
 
         Mockito.`when`(
             assetRepository.search(
@@ -357,7 +360,7 @@ class AssetServiceTest {
             assignedUserId = null
             externalRef = "OLD-REF"
             customFieldsJson = """{"old":true}"""
-            setBaseFields(this, id)
+            setBaseEntityFields(this, id)
         }
 
         Mockito.`when`(assetRepository.findByIdAndTenantId(id, tenantId)).thenReturn(existing)
@@ -449,7 +452,7 @@ class AssetServiceTest {
             tenantId = tenantId,
             name = "To Delete",
             status = AssetStatus.RETIRED
-        ).apply { setBaseFields(this, id) }
+        ).apply { setBaseEntityFields(this, id) }
 
         Mockito.`when`(assetRepository.findByIdAndTenantId(id, tenantId)).thenReturn(asset)
 
@@ -480,7 +483,7 @@ class AssetServiceTest {
             status = AssetStatus.IN_SERVICE
         ).apply {
             this.externalRef = externalRef
-            setBaseFields(this, UUID.randomUUID())
+            setBaseEntityFields(this, UUID.randomUUID())
         }
 
         Mockito.`when`(assetRepository.findByTenantIdAndExternalRef(tenantId, externalRef)).thenReturn(asset)
@@ -512,32 +515,6 @@ class AssetServiceTest {
             type = LocationType.SITE
         ).apply {
             path = "/$id"
-            setBaseFields(this, id)
+            setBaseEntityFields(this, id)
         }
-
-    private fun setBaseFields(entity: Any, id: UUID) {
-        var clazz: Class<*>? = entity.javaClass
-
-        while (clazz != null) {
-            try {
-                val idField = clazz.getDeclaredField("id")
-                idField.isAccessible = true
-                idField.set(entity, id)
-
-                val createdField = clazz.getDeclaredField("createdAt")
-                createdField.isAccessible = true
-                createdField.set(entity, Instant.now())
-
-                val updatedField = clazz.getDeclaredField("updatedAt")
-                updatedField.isAccessible = true
-                updatedField.set(entity, Instant.now())
-                return
-            } catch (_: NoSuchFieldException) {
-                // walk up base classes
-            }
-            clazz = clazz.superclass
-        }
-
-        error("id / createdAt / updatedAt not found in class hierarchy of ${entity.javaClass}")
-    }
 }

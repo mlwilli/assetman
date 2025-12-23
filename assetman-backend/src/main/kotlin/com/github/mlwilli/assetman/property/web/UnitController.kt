@@ -2,6 +2,7 @@ package com.github.mlwilli.assetman.property.web
 
 import com.github.mlwilli.assetman.property.domain.UnitStatus
 import com.github.mlwilli.assetman.property.service.UnitService
+import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
@@ -18,9 +19,10 @@ class UnitController(
     fun listUnits(
         @RequestParam(required = false) propertyId: UUID?,
         @RequestParam(required = false) status: UnitStatus?,
-        @RequestParam(required = false) search: String?
+        @RequestParam(required = false) search: String?,
+        @RequestParam(defaultValue = "50") limit: Int
     ): List<UnitDto> =
-        unitService.listUnits(propertyId, status, search)
+        unitService.listUnits(propertyId, status, search, limit)
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','TECHNICIAN','VIEWER')")
@@ -30,7 +32,7 @@ class UnitController(
     @PostMapping
     @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER')")
     fun createUnit(
-        @RequestBody request: CreateUnitRequest
+        @Valid @RequestBody request: CreateUnitRequest
     ): ResponseEntity<UnitDto> {
         val created = unitService.createUnit(request)
         return ResponseEntity.ok(created)
@@ -40,7 +42,7 @@ class UnitController(
     @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER')")
     fun updateUnit(
         @PathVariable id: UUID,
-        @RequestBody request: UpdateUnitRequest
+        @Valid @RequestBody request: UpdateUnitRequest
     ): ResponseEntity<UnitDto> {
         val updated = unitService.updateUnit(id, request)
         return ResponseEntity.ok(updated)
