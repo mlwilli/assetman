@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.bind.annotation.PathVariable
 import java.util.UUID
 
-
+// check api
 @RestController
 @RequestMapping("/api/users")
 class UserDirectoryController(
