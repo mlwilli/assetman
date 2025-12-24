@@ -9,7 +9,8 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.bind.annotation.PathVariable
 import java.util.UUID
 
-// check api
+// check api, 2.0 overhaul change..
+// todo: move to diff branch
 @RestController
 @RequestMapping("/api/users")
 class UserDirectoryController(
